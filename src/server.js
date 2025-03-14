@@ -8,21 +8,11 @@ import {
   InteractionType,
   verifyKey,
 } from "discord-interactions";
-import { AWW_COMMAND, ALLIANCE_COMMAND, INVITE_COMMAND } from "./commands.js";
+import { AWW_COMMAND, INVITE_COMMAND } from "./commands.js";
+import { ALLIANCE_COMMAND, createAlliance } from "./alliances.js";
 import { getCuteUrl } from "./reddit.js";
 import { InteractionResponseFlags } from "discord-interactions";
-
-class JsonResponse extends Response {
-  constructor(body, init) {
-    const jsonBody = JSON.stringify(body);
-    init = init || {
-      headers: {
-        "content-type": "application/json;charset=UTF-8",
-      },
-    };
-    super(jsonBody, init);
-  }
-}
+import { JsonResponse } from "./utils.js";
 
 const router = AutoRouter();
 
@@ -68,13 +58,7 @@ router.post("/", async (request, env) => {
         });
       }
       case ALLIANCE_COMMAND.name.toLowerCase(): {
-        console.log("testing alliance!", interaction);
-        return new JsonResponse({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: "Creating an alliance!",
-          },
-        });
+        return createAlliance(interaction);
       }
       case INVITE_COMMAND.name.toLowerCase(): {
         const applicationId = env.DISCORD_APPLICATION_ID;
