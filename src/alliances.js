@@ -1,5 +1,10 @@
 import { JsonResponse } from "./utils.js";
 import { InteractionResponseType } from "discord-interactions";
+import { Client, GatewayIntentBits } from "discord.js";
+
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+});
 
 export const ALLIANCE_COMMAND = {
   name: "alliance",
@@ -21,8 +26,16 @@ export const ALLIANCE_COMMAND = {
   ],
 };
 
-export const createAlliance = (interaction) => {
-  console.log("creating an alliance for:", interaction.data);
+export const createAlliance = async (interaction) => {
+  const roleNames = interaction.data.options
+    .filter((option) => option.name === "members")
+    .value.split(",");
+  console.log("roles requested in alliance:", roleNames);
+  const guild = await client.guilds.fetch(interaction.guild_id);
+  console.log("guild is:", guild);
+  const allMembers = await guild.members.fetch();
+  //   const membersWithCorrectRoles = allMembers.filter()
+  console.log("creating an alliance for:", allMembers);
   return new JsonResponse({
     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
     data: {

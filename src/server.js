@@ -58,7 +58,7 @@ router.post("/", async (request, env) => {
         });
       }
       case ALLIANCE_COMMAND.name.toLowerCase(): {
-        return createAlliance(interaction);
+        return await createAlliance(interaction);
       }
       case INVITE_COMMAND.name.toLowerCase(): {
         const applicationId = env.DISCORD_APPLICATION_ID;
