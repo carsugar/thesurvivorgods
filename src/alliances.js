@@ -1,4 +1,4 @@
-import { JsonResponse } from "./utils";
+import { JsonResponse } from "./utils.js";
 import { InteractionResponseType } from "discord-interactions";
 
 export const ALLIANCE_COMMAND = {
