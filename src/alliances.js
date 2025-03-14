@@ -1,10 +1,13 @@
 import { JsonResponse } from "./utils.js";
 import { InteractionResponseType } from "discord-interactions";
 import { Client, GatewayIntentBits } from "discord.js";
+import process from "node:process";
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
 });
+
+client.login(process.env.DISCORD_TOKEN);
 
 export const ALLIANCE_COMMAND = {
   name: "alliance",
