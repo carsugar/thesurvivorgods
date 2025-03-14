@@ -1,13 +1,7 @@
 import { JsonResponse } from "./utils.js";
 import { InteractionResponseType } from "discord-interactions";
-// import { Client, GatewayIntentBits } from "discord.js";
-// import { token } from "./register.js";
 
-// const client = new Client({
-//   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
-// });
-
-// client.login(token);
+import { createBot } from "@discordeno/bot";
 
 export const ALLIANCE_COMMAND = {
   name: "alliance",
@@ -38,6 +32,15 @@ export const createAlliance = async (interaction) => {
   //   console.log("guild is:", guild);
   //   const allMembers = await guild.members.fetch();
   //   //   const membersWithCorrectRoles = allMembers.filter()
+  const bot = createBot({
+    token:
+      "MTM0NDQxMzU1NDE5OTIzNjY3MA.GPW9m6.H-YMRIyG98l3ScEq32MdZqR6MttlLFHI0zX1qM",
+    events: {
+      ready: ({ shardId }) => console.log(`Shard ${shardId} ready`),
+    },
+  });
+
+  await bot.start();
   console.log("creating an alliance for:", interaction.data.options);
   return new JsonResponse({
     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
