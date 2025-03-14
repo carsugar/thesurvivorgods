@@ -1,27 +1,10 @@
-import { JsonResponse } from "./utils.js";
-import { InteractionResponseType } from "discord-interactions";
+import axios from "axios";
+import dotenv from "dotenv";
+import process from "node:process";
 
-import { createBot } from "@discordeno/bot";
+dotenv.config({ path: ".dev.vars" });
 
-export const ALLIANCE_COMMAND = {
-  name: "alliance",
-  description: "Create an alliance between players.",
-  options: [
-    {
-      name: "name",
-      description: "The name of the alliance",
-      type: 3, // 3 is type STRING
-      required: true,
-    },
-    {
-      name: "members",
-      description:
-        "Comma-separated list of people to add (use their role names!)",
-      type: 3, // 3 is type STRING
-      required: true,
-    },
-  ],
-};
+const DISCORD_API_BASE_URL = "https://discord.com/api/v10";
 
 export const createAlliance = async (interaction) => {
   //   const roleNames = interaction.data.options
@@ -32,19 +15,17 @@ export const createAlliance = async (interaction) => {
   //   console.log("guild is:", guild);
   //   const allMembers = await guild.members.fetch();
   //   //   const membersWithCorrectRoles = allMembers.filter()
-  const bot = createBot({
-    token: process.env.DISCORD_TOKEN,
-    events: {
-      ready: ({ shardId }) => console.log(`Shard ${shardId} ready`),
-    },
-  });
 
-  await bot.start();
-  console.log("creating an alliance for:", interaction.data.options);
-  return new JsonResponse({
-    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-    data: {
-      content: "Creating an alliance!",
-    },
-  });
+  console.log("hit create endpoint");
+
+  const response = await axios.get(
+    `${DISCORD_API_BASE_URL}/guilds/${interaction.guild_id}/members`,
+    {
+      headers: {
+        Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+      },
+    }
+  );
+
+  console.log("creating an alliance for:", response);
 };

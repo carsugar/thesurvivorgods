@@ -4,7 +4,7 @@
   "description": "A discord bot for all things Survivor",
   "type": "module",
   "private": true,
-  "main": "src/server.js",
+  "main": "src/index.js",
   "scripts": {
     "start": "wrangler dev",
     "ngrok": "ngrok http 8787",
@@ -18,16 +18,17 @@
   "author": "Carling Sugarman <carsugar414@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "axios": "^1.8.3",
     "discord-interactions": "^4.0.0",
     "discord.js": "^14.18.0",
     "discordeno": "^21.0.0",
+    "dotenv": "^16.4.7",
     "itty-router": "^5.0.9"
   },
   "devDependencies": {
     "@eslint/js": "^9.1.1",
     "c8": "^10.1.2",
     "chai": "^5.0.0",
-    "dotenv": "^16.0.3",
     "eslint": "^9.1.0",
     "eslint-config-prettier": "^10.0.2",
     "eslint-plugin-prettier": "^5.1.3",
