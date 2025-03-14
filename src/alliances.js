@@ -1,32 +1,61 @@
 import axios from "axios";
-
+import { ChannelTypes } from "discord-interactions";
 const DISCORD_API_BASE_URL = "https://discord.com/api/v10";
 
 export const createAlliance = async (interaction, env) => {
-  //   const roleNames = interaction.data.options
-  //     .filter((option) => option.name === "members")[0]
-  //     .value?.split(",");
-  //   console.log("roles requested in alliance:", roleNames);
-  //   const guild = await client.guilds.fetch(interaction.guild_id);
-  //   console.log("guild is:", guild);
-  //   const allMembers = await guild.members.fetch();
-  //   //   const membersWithCorrectRoles = allMembers.filter()
-
-  console.log(
-    "hitting create endpoint for guild: ",
-    env.DISCORD_TOKEN?.slice(0, 5)
-  );
-
   try {
-    const response = await axios.get(
-      `${DISCORD_API_BASE_URL}/guilds/${interaction.guild_id}`,
+    // Fetch roles for the guild.
+    const guildRolesRes = await axios.get(
+      `${DISCORD_API_BASE_URL}/guilds/${interaction.guild_id}/roles`,
       {
         headers: {
           Authorization: `Bot ${env.DISCORD_TOKEN}`,
         },
       }
     );
-    console.log("created an alliance for:", response);
+
+    // Find the roles that match the ones requested for the alliance.
+    const rolesToAdd = interaction.data.options
+      .filter((option) => option.name === "members")[0]
+      .value?.split(",");
+    const roleIdsToAdd = guildRolesRes.data
+      .filter((role) => rolesToAdd.includes(role.name))
+      .map((role) => role.id);
+
+    // Create a new channel with the correct name and members.
+    const allianceName = interaction.data.options.filter(
+      (option) => option.name === "name"
+    )[0].value;
+
+    const rolePermissions = roleIdsToAdd.map((roleId) => {
+      return {
+        id: roleId,
+        type: 0,
+        allow: "3072", // Read and write in channel.
+      };
+    });
+
+    await axios.post(
+      `${DISCORD_API_BASE_URL}/guilds/${interaction.guild_id}/channels`,
+      {
+        name: allianceName,
+        type: ChannelTypes.GUILD_TEXT,
+        parent_id: "1339381891777957918",
+        permission_overwrites: [
+          {
+            id: "1328343957608071178", // @everyone role
+            type: 0,
+            deny: "1024", // Deny VIEW_CHANNEL (bitwise value)
+          },
+          ...rolePermissions,
+        ],
+      },
+      {
+        headers: {
+          Authorization: `Bot ${env.DISCORD_TOKEN}`,
+        },
+      }
+    );
   } catch (e) {
     console.log("Failed to create alliance: ", e);
   }
