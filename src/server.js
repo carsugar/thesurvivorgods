@@ -68,7 +68,7 @@ router.post("/", async (request, env) => {
         });
       }
       case ALLIANCE_COMMAND.name.toLowerCase(): {
-        console.log("test");
+        console.log("testing alliance!", interaction);
         return new JsonResponse({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
