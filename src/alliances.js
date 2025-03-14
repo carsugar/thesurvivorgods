@@ -32,7 +32,7 @@ export const ALLIANCE_COMMAND = {
 export const createAlliance = async (interaction) => {
   const roleNames = interaction.data.options
     .filter((option) => option.name === "members")[0]
-    .value.split(",");
+    .value?.split(",");
   console.log("roles requested in alliance:", roleNames);
   const guild = await client.guilds.fetch(interaction.guild_id);
   console.log("guild is:", guild);
