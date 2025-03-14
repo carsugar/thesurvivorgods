@@ -1,7 +1,7 @@
 {
-  "name": "awwbot",
+  "name": "thesurvivorgods",
   "version": "1.0.0",
-  "description": "A simple discord bot that uses intents to post pictures from r/aww",
+  "description": "A discord bot for all things Survivor",
   "type": "module",
   "private": true,
   "main": "src/server.js",
@@ -15,10 +15,11 @@
     "publish": "wrangler deploy"
   },
   "keywords": [],
-  "author": "Justin Beckwith <justin.beckwith@gmail.com>",
+  "author": "Carling Sugarman <carsugar414@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "discord-interactions": "^4.0.0",
+    "discord.js": "^14.18.0",
     "itty-router": "^5.0.9"
   },
   "devDependencies": {
@@ -34,6 +35,6 @@
     "ngrok": "^5.0.0-beta.2",
     "prettier": "^3.2.5",
     "sinon": "^19.0.2",
-    "wrangler": "^3.0.1"
+    "wrangler": "^4.0.0"
   }
 }
