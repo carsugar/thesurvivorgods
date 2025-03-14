@@ -11,7 +11,7 @@ import process from "node:process";
 
 dotenv.config({ path: ".dev.vars" });
 
-const token = process.env.DISCORD_TOKEN;
+export const token = process.env.DISCORD_TOKEN;
 const applicationId = process.env.DISCORD_APPLICATION_ID;
 
 if (!token) {
