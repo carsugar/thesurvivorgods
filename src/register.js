@@ -1,4 +1,5 @@
-import { AWW_COMMAND, ALLIANCE_COMMAND, INVITE_COMMAND } from "./commands.js";
+import { AWW_COMMAND, INVITE_COMMAND } from "./commands.js";
+import { ALLIANCE_COMMAND } from "./alliances.js";
 import dotenv from "dotenv";
 import process from "node:process";
 
