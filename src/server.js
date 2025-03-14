@@ -58,7 +58,7 @@ router.post("/", async (request, env) => {
         });
       }
       case ALLIANCE_COMMAND.name.toLowerCase(): {
-        await createAlliance(interaction);
+        await createAlliance(interaction, env);
         return new JsonResponse({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {

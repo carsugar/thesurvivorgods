@@ -1,12 +1,8 @@
 import axios from "axios";
-import dotenv from "dotenv";
-import process from "node:process";
-
-dotenv.config({ path: ".dev.vars" });
 
 const DISCORD_API_BASE_URL = "https://discord.com/api/v10";
 
-export const createAlliance = async (interaction) => {
+export const createAlliance = async (interaction, env) => {
   //   const roleNames = interaction.data.options
   //     .filter((option) => option.name === "members")[0]
   //     .value?.split(",");
@@ -16,19 +12,22 @@ export const createAlliance = async (interaction) => {
   //   const allMembers = await guild.members.fetch();
   //   //   const membersWithCorrectRoles = allMembers.filter()
 
-  console.log("hit create endpoint");
+  console.log(
+    "hitting create endpoint for guild: ",
+    env.DISCORD_TOKEN?.slice(0, 5)
+  );
 
   try {
     const response = await axios.get(
-      `${DISCORD_API_BASE_URL}/guilds/${interaction.guild_id}/members`,
+      `${DISCORD_API_BASE_URL}/guilds/${interaction.guild_id}`,
       {
         headers: {
-          Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+          Authorization: `Bot ${env.DISCORD_TOKEN}`,
         },
       }
     );
     console.log("created an alliance for:", response);
   } catch (e) {
-    console.error("Failed to create alliance: ", e);
+    console.log("Failed to create alliance: ", e);
   }
 };
