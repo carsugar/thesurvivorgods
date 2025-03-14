@@ -33,8 +33,7 @@ export const createAlliance = async (interaction) => {
   //   const allMembers = await guild.members.fetch();
   //   //   const membersWithCorrectRoles = allMembers.filter()
   const bot = createBot({
-    token:
-      "MTM0NDQxMzU1NDE5OTIzNjY3MA.GPW9m6.H-YMRIyG98l3ScEq32MdZqR6MttlLFHI0zX1qM",
+    token: process.env.DISCORD_TOKEN,
     events: {
       ready: ({ shardId }) => console.log(`Shard ${shardId} ready`),
     },
