@@ -18,14 +18,17 @@ export const createAlliance = async (interaction) => {
 
   console.log("hit create endpoint");
 
-  const response = await axios.get(
-    `${DISCORD_API_BASE_URL}/guilds/${interaction.guild_id}/members`,
-    {
-      headers: {
-        Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
-      },
-    }
-  );
-
-  console.log("creating an alliance for:", response);
+  try {
+    const response = await axios.get(
+      `${DISCORD_API_BASE_URL}/guilds/${interaction.guild_id}/members`,
+      {
+        headers: {
+          Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+        },
+      }
+    );
+    console.log("created an alliance for:", response);
+  } catch (e) {
+    console.error("Failed to create alliance: ", e);
+  }
 };
