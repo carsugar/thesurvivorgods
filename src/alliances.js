@@ -1,13 +1,13 @@
 import { JsonResponse } from "./utils.js";
 import { InteractionResponseType } from "discord-interactions";
-import { Client, GatewayIntentBits } from "discord.js";
-import { token } from "./register.js";
+// import { Client, GatewayIntentBits } from "discord.js";
+// import { token } from "./register.js";
 
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
-});
+// const client = new Client({
+//   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+// });
 
-client.login(token);
+// client.login(token);
 
 export const ALLIANCE_COMMAND = {
   name: "alliance",
