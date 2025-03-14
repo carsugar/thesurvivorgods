@@ -2,6 +2,8 @@ name = "thesurvivorgods"
 main = "./src/server.js"
 compatibility_date="2023-05-18"
 
+workers_dev = true
+
 # [secrets]
 # DISCORD_TOKEN
 # DISCORD_PUBLIC_KEY
