@@ -34,11 +34,11 @@ export const createAlliance = async (interaction) => {
   //     .filter((option) => option.name === "members")[0]
   //     .value?.split(",");
   //   console.log("roles requested in alliance:", roleNames);
-  const guild = await client.guilds.fetch(interaction.guild_id);
-  console.log("guild is:", guild);
-  const allMembers = await guild.members.fetch();
-  //   const membersWithCorrectRoles = allMembers.filter()
-  console.log("creating an alliance for:", allMembers);
+  //   const guild = await client.guilds.fetch(interaction.guild_id);
+  //   console.log("guild is:", guild);
+  //   const allMembers = await guild.members.fetch();
+  //   //   const membersWithCorrectRoles = allMembers.filter()
+  console.log("creating an alliance for:", interaction.data.options);
   return new JsonResponse({
     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
     data: {
