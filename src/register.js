@@ -1,4 +1,8 @@
-import { ALLIANCE_COMMAND, AWW_COMMAND, INVITE_COMMAND } from "./commands.js";
+import {
+  ALLIANCE_COMMAND,
+  ADD_PLAYER_COMMAND,
+  INVITE_COMMAND,
+} from "./commands.js";
 import dotenv from "dotenv";
 import process from "node:process";
 
@@ -34,7 +38,7 @@ const response = await fetch(url, {
     Authorization: `Bot ${token}`,
   },
   method: "PUT",
-  body: JSON.stringify([AWW_COMMAND, ALLIANCE_COMMAND, INVITE_COMMAND]),
+  body: JSON.stringify([ALLIANCE_COMMAND, ADD_PLAYER_COMMAND, INVITE_COMMAND]),
 });
 
 if (response.ok) {

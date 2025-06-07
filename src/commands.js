@@ -23,10 +23,49 @@ export const ALLIANCE_COMMAND = {
   ],
 };
 
-export const AWW_COMMAND = {
-  name: "awwww",
-  description: "Drop some cuteness on this channel.",
+export const ADD_PLAYER_COMMAND = {
+  name: "add_player",
+  description: "Add a player to the game.",
+  options: [
+    {
+      name: "user",
+      description: "The user to add",
+      type: 6, // USER
+      required: true,
+    },
+    {
+      name: "player_name",
+      description: "The name the player will use in the game.",
+      type: 3, // STRING
+      required: true,
+    },
+  ],
 };
+// export const PING_COMMAND = {
+//   name: "ping",
+//   description:
+//     "Ping a channel with a message regularly at a specified interval.",
+//   options: [
+//     {
+//       name: "message",
+//       description: "The message to send",
+//       type: 3, // STRING
+//       required: true,
+//     },
+//     {
+//       name: "channel",
+//       description: "The channel to ping",
+//       type: 7, // CHANNEL
+//       required: true,
+//     },
+//     {
+//       name: "interval",
+//       description: "The number of minutes between each ping",
+//       type: 4, // INTEGER
+//       required: true,
+//     },
+//   ],
+// };
 
 export const INVITE_COMMAND = {
   name: "invite",

@@ -8,9 +8,13 @@ import {
   InteractionType,
   verifyKey,
 } from "discord-interactions";
-import { ALLIANCE_COMMAND, AWW_COMMAND, INVITE_COMMAND } from "./commands.js";
+import {
+  ALLIANCE_COMMAND,
+  ADD_PLAYER_COMMAND,
+  INVITE_COMMAND,
+} from "./commands.js";
 import { createAlliance } from "./alliances.js";
-import { getCuteUrl } from "./reddit.js";
+import { addPlayer } from "./players.js";
 import { InteractionResponseFlags } from "discord-interactions";
 import { JsonResponse } from "./utils.js";
 
@@ -63,6 +67,15 @@ router.post("/", async (request, env) => {
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: "Creating your alliance!",
+          },
+        });
+      }
+      case ADD_PLAYER_COMMAND.name.toLowerCase(): {
+        await addPlayer(interaction, env);
+        return new JsonResponse({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: "Player added!",
           },
         });
       }
