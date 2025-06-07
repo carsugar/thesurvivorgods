@@ -11,9 +11,9 @@ export const addPlayer = async (interaction, env) => {
       interaction.data.options
     );
 
-    await env.DB.prepare("insert into players (id, player_name) values (?, ?)")
-      .bind(user, player_name)
-      .all();
+    // await env.DB.prepare("insert into players (id, player_name) values (?, ?)")
+    //   .bind(user, player_name)
+    //   .all();
 
     // create and add role to player
     // const roles = await getGuildRoles(interaction.guild_id, env);
@@ -66,6 +66,6 @@ export const addPlayer = async (interaction, env) => {
     );
     console.log("done");
   } catch (e) {
-    console.log("Failed to create alliance: ", e);
+    console.log("Failed to add player: ", e);
   }
 };
