@@ -53,7 +53,6 @@ export const addPlayer = async (interaction, env) => {
       }
     );
 
-    console.log("changing name");
     // Change player name
     await axios.patch(
       `${DISCORD_API_BASE_URL}/guilds/${interaction.guild_id}/members/${user}`,
