@@ -20,7 +20,7 @@ export const parseSlashCommandOptions = (options) => {
   return parsedOptions;
 };
 
-export const getGuildRoles = async (guild, env) => {
+export const getRoles = async (guild, env) => {
   const rolesRes = await axios.get(
     `${DISCORD_API_BASE_URL}/guilds/${guild}/roles`,
     {
@@ -30,4 +30,57 @@ export const getGuildRoles = async (guild, env) => {
     }
   );
   return rolesRes.data;
+};
+
+export const createRole = async (guild, env, roleName) => {
+  console.log("Creating new role: ", roleName);
+  const newRoleRes = await axios.post(
+    `${DISCORD_API_BASE_URL}/guilds/${guild}/roles`,
+    {
+      name: roleName,
+    },
+    {
+      headers: {
+        Authorization: `Bot ${env.DISCORD_TOKEN}`,
+      },
+    }
+  );
+
+  return newRoleRes.data.id;
+};
+
+export const getChannels = async (guild, env) => {
+  const rolesRes = await axios.get(
+    `${DISCORD_API_BASE_URL}/guilds/${guild}/channels`,
+    {
+      headers: {
+        Authorization: `Bot ${env.DISCORD_TOKEN}`,
+      },
+    }
+  );
+  return rolesRes.data;
+};
+
+export const createChannel = async (
+  guild,
+  env,
+  channelName,
+  channelType,
+  category
+) => {
+  console.log("Creating new channel: ", channelName);
+  const rolesRes = await axios.post(
+    `${DISCORD_API_BASE_URL}/guilds/${guild}/channels`,
+    {
+      name: channelName,
+      type: channelType,
+      parent_id: category,
+    },
+    {
+      headers: {
+        Authorization: `Bot ${env.DISCORD_TOKEN}`,
+      },
+    }
+  );
+  return rolesRes.data.id;
 };

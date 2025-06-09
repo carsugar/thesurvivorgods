@@ -39,6 +39,12 @@ export const ADD_PLAYER_COMMAND = {
       type: 3, // STRING
       required: true,
     },
+    {
+      name: "tribe",
+      description: "The tribe to which the player will belong.",
+      type: 3, // STRING
+      required: true,
+    },
   ],
 };
 // export const PING_COMMAND = {
