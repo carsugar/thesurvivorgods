@@ -66,6 +66,7 @@ export const createChannel = async (
   env,
   channelName,
   channelType,
+  perms,
   category
 ) => {
   console.log("Creating new channel: ", channelName);
@@ -75,6 +76,7 @@ export const createChannel = async (
       name: channelName,
       type: channelType,
       parent_id: category,
+      permission_overwrites: perms,
     },
     {
       headers: {

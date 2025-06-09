@@ -76,11 +76,29 @@ export const addPlayer = async (interaction, env) => {
       );
     }
 
+    // Create confessional and submissions channels
     await createChannel(
       guild_id,
       env,
       `${player_name}-confessional`,
       ChannelTypes.GUILD_TEXT,
+      [
+        { id: guild_id, type: 0, deny: 0x400 }, // @everyone cannot view
+        { id: user, type: 1, allow: 0x400 | 0x800 }, // player can view + message
+        // TODO: let trusted specs view but not message
+      ],
+      tribeConfsChannel
+    );
+
+    await createChannel(
+      guild_id,
+      env,
+      `${player_name}-submissions`,
+      ChannelTypes.GUILD_TEXT,
+      [
+        { id: guild_id, type: 0, deny: 0x400 }, // @everyone cannot view
+        { id: user, type: 1, allow: 0x400 | 0x800 }, // player can view + message
+      ],
       tribeConfsChannel
     );
 
