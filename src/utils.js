@@ -49,6 +49,28 @@ export const createRole = async (guild, env, roleName) => {
   return newRoleRes.data.id;
 };
 
+export const addRoleForPlayer = async (
+  guild,
+  env,
+  existingRoles,
+  user,
+  roleName
+) => {
+  let newRole = existingRoles.filter((role) => role.name === roleName)[0]?.id;
+  if (!newRole) {
+    newRole = await createRole(guild, env, roleName);
+  }
+  await axios.put(
+    `${DISCORD_API_BASE_URL}/guilds/${guild}/members/${user}/roles/${newRole}`,
+    {},
+    {
+      headers: {
+        Authorization: `Bot ${env.DISCORD_TOKEN}`,
+      },
+    }
+  );
+};
+
 export const getChannels = async (guild, env) => {
   const rolesRes = await axios.get(
     `${DISCORD_API_BASE_URL}/guilds/${guild}/channels`,

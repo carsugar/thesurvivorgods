@@ -5,7 +5,8 @@ import {
   getChannels,
   createChannel,
   parseSlashCommandOptions,
-  // getRoles,
+  getRoles,
+  addRoleForPlayer,
 } from "./utils";
 import { ChannelTypes } from "discord-interactions";
 
@@ -17,36 +18,20 @@ export const addPlayer = async (interaction, env) => {
 
     const { guild_id } = interaction;
 
+    const roles = await getRoles(guild_id, env);
+
     // await env.DB.prepare("insert into players (id, player_name) values (?, ?)")
     //   .bind(user, player_name)
     //   .all();
 
-    // create and add role to player
-    // const roles = await getRoles(guild_id, env);
-    // console.log("roles", roles);
+    // Add individual role for player
+    await addRoleForPlayer(guild_id, env, roles, user, player_name);
 
-    const newRoleId = await createRole(guild_id, env, `${player_name}`);
+    // Add role for tribe
+    await addRoleForPlayer(guild_id, env, roles, user, tribe);
 
-    await axios.put(
-      `${DISCORD_API_BASE_URL}/guilds/${guild_id}/members/${user}/roles/${newRoleId}`,
-      {},
-      {
-        headers: {
-          Authorization: `Bot ${env.DISCORD_TOKEN}`,
-        },
-      }
-    );
-
-    // Dwarves role (for S2)
-    // await axios.put(
-    //   `${DISCORD_API_BASE_URL}/guilds/${guild_id}/members/${user}/roles/1380780197195939920`,
-    //   {},
-    //   {
-    //     headers: {
-    //       Authorization: `Bot ${env.DISCORD_TOKEN}`,
-    //     },
-    //   }
-    // );
+    // Add general player role
+    await addRoleForPlayer(guild_id, env, roles, user, "Player");
 
     // Change player name
     await axios.patch(
@@ -59,13 +44,11 @@ export const addPlayer = async (interaction, env) => {
       }
     );
 
-    // Create confessional + submissions channels (make tribe category if needed)
+    // Create confessional + submissions channels (creating tribe category if needed)
     const channels = await getChannels(guild_id, env);
     let tribeConfsChannel = channels.filter(
       (channel) => channel.name === `${tribe} Confs`
     )[0]?.id;
-
-    console.log("tribeConfsChannel", tribeConfsChannel);
 
     if (!tribeConfsChannel) {
       tribeConfsChannel = await createChannel(
@@ -101,8 +84,6 @@ export const addPlayer = async (interaction, env) => {
       ],
       tribeConfsChannel
     );
-
-    console.log("done");
   } catch (e) {
     console.log("Failed to add player: ", e);
   }
