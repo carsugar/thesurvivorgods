@@ -1,6 +1,7 @@
 import {
   ALLIANCE_COMMAND,
   ADD_PLAYER_COMMAND,
+  ONE_ON_ONES_COMMAND,
   INVITE_COMMAND,
 } from "./commands.js";
 import dotenv from "dotenv";
@@ -38,7 +39,12 @@ const response = await fetch(url, {
     Authorization: `Bot ${token}`,
   },
   method: "PUT",
-  body: JSON.stringify([ALLIANCE_COMMAND, ADD_PLAYER_COMMAND, INVITE_COMMAND]),
+  body: JSON.stringify([
+    ALLIANCE_COMMAND,
+    ADD_PLAYER_COMMAND,
+    ONE_ON_ONES_COMMAND,
+    INVITE_COMMAND,
+  ]),
 });
 
 if (response.ok) {

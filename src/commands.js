@@ -10,14 +10,14 @@ export const ALLIANCE_COMMAND = {
     {
       name: "name",
       description: "The name of the alliance",
-      type: 3, // 3 is type STRING
+      type: 3, // STRING
       required: true,
     },
     {
       name: "members",
       description:
         "Comma-separated list of people to add (use their role names!)",
-      type: 3, // 3 is type STRING
+      type: 3, // STRING
       required: true,
     },
   ],
@@ -47,6 +47,20 @@ export const ADD_PLAYER_COMMAND = {
     },
   ],
 };
+
+export const ONE_ON_ONES_COMMAND = {
+  name: "one_on_ones",
+  description: "Creates one on one chats between players on the same tribe.",
+  options: [
+    {
+      name: "tribes",
+      description: "Comma-separated list of tribes",
+      type: 3, // STRING
+      required: true,
+    },
+  ],
+};
+
 // export const PING_COMMAND = {
 //   name: "ping",
 //   description:

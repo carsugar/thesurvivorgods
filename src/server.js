@@ -12,9 +12,10 @@ import {
   ALLIANCE_COMMAND,
   ADD_PLAYER_COMMAND,
   INVITE_COMMAND,
+  ONE_ON_ONES_COMMAND,
 } from "./commands.js";
 import { createAlliance } from "./alliances.js";
-import { addPlayer } from "./players.js";
+import { addPlayer, create1on1s } from "./players.js";
 import { InteractionResponseFlags } from "discord-interactions";
 import { JsonResponse } from "./utils.js";
 
@@ -67,6 +68,15 @@ router.post("/", async (request, env) => {
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: "Player added!",
+          },
+        });
+      }
+      case ONE_ON_ONES_COMMAND.name.toLowerCase(): {
+        await create1on1s(interaction, env);
+        return new JsonResponse({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: "1 on 1s Created!",
           },
         });
       }
