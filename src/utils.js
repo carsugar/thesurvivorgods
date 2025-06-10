@@ -121,11 +121,12 @@ export const getOrCreateCategory = async (
   existingChannels,
   categoryName
 ) => {
-  let newCategory = existingChannels.filter(
+  let existingCategory = existingChannels.filter(
     (channel) => channel.name === categoryName
   )[0]?.id;
 
-  if (!newCategory) {
+  let newCategory;
+  if (!existingCategory) {
     newCategory = await createChannel(
       guild,
       env,
@@ -134,7 +135,55 @@ export const getOrCreateCategory = async (
     );
   }
 
-  return newCategory;
+  return existingCategory || newCategory;
+};
+
+export const getOrCreate1on1 = async (
+  guild,
+  env,
+  existingChannels,
+  player1,
+  player2,
+  category
+) => {
+  const ONE_ON_ONE_PERMS = [
+    { id: guild, type: 0, deny: 0x400 }, // @everyone cannot view
+    { id: player1.user.id, type: 1, allow: 0x400 | 0x800 }, // player 1 can view + message
+    { id: player2.user.id, type: 1, allow: 0x400 | 0x800 }, // player 2 can view + message
+  ];
+
+  // Look for existing 1:1 for these players
+  let existing1on1 = existingChannels.filter(
+    (channel) => channel.name === `${player1.nick}-${player2.nick}`
+  )[0]?.id;
+
+  let new1on1;
+  if (existing1on1) {
+    // Make sure all the right perms are set, because the 1:1
+    // could have been archived in a previous swap.
+    await axios.patch(
+      `${DISCORD_API_BASE_URL}/channels/${existing1on1}`,
+      {
+        permission_overwrites: ONE_ON_ONE_PERMS,
+      },
+      {
+        headers: {
+          Authorization: `Bot ${env.DISCORD_TOKEN}`,
+        },
+      }
+    );
+  } else {
+    new1on1 = await createChannel(
+      guild,
+      env,
+      `${player1.nick}-${player2.nick}`,
+      ChannelTypes.GUILD_TEXT,
+      ONE_ON_ONE_PERMS,
+      category
+    );
+  }
+
+  return existing1on1 || new1on1;
 };
 
 export const getMembers = async (guild, env) => {

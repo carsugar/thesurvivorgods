@@ -2,6 +2,7 @@ import {
   ALLIANCE_COMMAND,
   ADD_PLAYER_COMMAND,
   ONE_ON_ONES_COMMAND,
+  SWAP_TRIBES_COMMAND,
   INVITE_COMMAND,
 } from "./commands.js";
 import dotenv from "dotenv";
@@ -43,6 +44,7 @@ const response = await fetch(url, {
     ALLIANCE_COMMAND,
     ADD_PLAYER_COMMAND,
     ONE_ON_ONES_COMMAND,
+    SWAP_TRIBES_COMMAND,
     INVITE_COMMAND,
   ]),
 });

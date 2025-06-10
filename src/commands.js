@@ -61,6 +61,26 @@ export const ONE_ON_ONES_COMMAND = {
   ],
 };
 
+export const SWAP_TRIBES_COMMAND = {
+  name: "swap_tribes",
+  description:
+    "Divides players into new tribes and handles movement of confs/subs/1:1s.",
+  options: [
+    {
+      name: "old_tribes",
+      description: "Comma-separated list of current tribes",
+      type: 3, // STRING
+      required: true,
+    },
+    {
+      name: "new_tribes",
+      description: "Comma-separated list of new tribes",
+      type: 3, // STRING
+      required: true,
+    },
+  ],
+};
+
 // export const PING_COMMAND = {
 //   name: "ping",
 //   description:
