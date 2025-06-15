@@ -170,10 +170,39 @@ export const swapTribes = async (interaction, env) => {
 
     shuffledPlayers.forEach((player, index) => {
       const tribe = newTribeList[index % newTribeList.length];
-      newTribePlayers[tribe].push(player.nick);
+      newTribePlayers[tribe].push(player);
     });
 
-    console.log("newTribePlayers", newTribePlayers);
+    for (const tribe of newTribeList) {
+      const tribePlayers = newTribePlayers[tribe];
+
+      const pairs = [];
+      for (let i = 0; i < tribePlayers.length; i++) {
+        for (let j = i + 1; j < tribePlayers.length; j++) {
+          const [a, b] = [tribePlayers[i], tribePlayers[j]].sort(
+            (a, b) => a.nick - b.nick
+          );
+          pairs.push([a, b]);
+        }
+      }
+
+      const tribe1on1sCategory = await getOrCreateCategory(
+        guild_id,
+        env,
+        channels,
+        `${tribe} One on Ones`
+      );
+      for (const pair of pairs) {
+        const oneOnOne = getOrCreate1on1(
+          guild_id,
+          env,
+          channels,
+          pair[0],
+          pair[1],
+          tribe1on1sCategory
+        );
+      }
+    }
 
     // randomize new tribes
     // for each pair of new tribe:
