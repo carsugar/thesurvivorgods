@@ -17,7 +17,7 @@ const PLAYER_ROLE_NAME = "Dwarfs";
 const PRE_JURY_ROLE_NAME = "Prejury";
 const JURY_ROLE_NAME = "Jury";
 const SEASON_ROLE_NAME = "S2: Reflections of Fate";
-const TRUSTED_SPEC_ROLE = "Trusted Spectator";
+const TRUSTED_SPEC_ROLE = "Trusted Spectators";
 
 export const addPlayer = async (interaction, env) => {
   try {
