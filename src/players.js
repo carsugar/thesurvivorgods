@@ -9,10 +9,15 @@ import {
   getMembers,
   getOrCreateCategory,
   getOrCreate1on1,
+  removeRoleForPlayer,
 } from "./utils";
 import { ChannelTypes } from "discord-interactions";
 
-const PLAYER_ROLE_NAME = "Player";
+const PLAYER_ROLE_NAME = "Dwarfs";
+const PRE_JURY_ROLE_NAME = "Prejury";
+const JURY_ROLE_NAME = "Jury";
+const SEASON_ROLE_NAME = "S2: Reflections of Fate";
+const TRUSTED_SPEC_ROLE = "Trusted Spectator";
 
 export const addPlayer = async (interaction, env) => {
   try {
@@ -85,6 +90,71 @@ export const addPlayer = async (interaction, env) => {
     );
   } catch (e) {
     console.log("Failed to add player: ", e);
+  }
+};
+
+export const bootPlayer = async (interaction, env) => {
+  try {
+    const { user, tribe, is_jury } = parseSlashCommandOptions(
+      interaction.data.options
+    );
+
+    const { guild_id } = interaction;
+
+    const playerRes = await axios.get(
+      `${DISCORD_API_BASE_URL}/guilds/${guild_id}/members/${user}`,
+      {
+        headers: {
+          Authorization: `Bot ${env.DISCORD_TOKEN}`,
+        },
+      }
+    );
+    const playerName = playerRes.data.nick;
+
+    const roles = await getRoles(guild_id, env);
+    const channels = await getChannels(guild_id, env);
+
+    await addRoleForPlayer(
+      guild_id,
+      env,
+      roles,
+      user,
+      is_jury ? JURY_ROLE_NAME : PRE_JURY_ROLE_NAME
+    );
+    await addRoleForPlayer(guild_id, env, roles, user, SEASON_ROLE_NAME);
+    if (!is_jury) {
+      await addRoleForPlayer(guild_id, env, roles, user, TRUSTED_SPEC_ROLE);
+    }
+    await removeRoleForPlayer(guild_id, env, roles, user, playerName);
+    await removeRoleForPlayer(guild_id, env, roles, user, PLAYER_ROLE_NAME);
+    await removeRoleForPlayer(guild_id, env, roles, user, tribe);
+
+    const tribe1on1sCategory = channels.filter(
+      (channel) => channel.name === `${tribe} One on Ones`
+    )[0]?.id;
+    const oneOnOnes = channels.filter(
+      (channel) =>
+        channel.parent_id === tribe1on1sCategory &&
+        channel.name.includes(playerName.toLowerCase().split(" ").join("-"))
+    );
+
+    for (const channel of oneOnOnes) {
+      await axios.patch(
+        `${DISCORD_API_BASE_URL}/channels/${channel.id}`,
+        {
+          permission_overwrites: [
+            { id: guild_id, type: 0, deny: 0x400 }, // @everyone cannot view
+          ],
+        },
+        {
+          headers: {
+            Authorization: `Bot ${env.DISCORD_TOKEN}`,
+          },
+        }
+      );
+    }
+  } catch (e) {
+    console.log("Failed to boot player: ", e);
   }
 };
 

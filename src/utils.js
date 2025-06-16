@@ -72,6 +72,26 @@ export const addRoleForPlayer = async (
   );
 };
 
+export const removeRoleForPlayer = async (
+  guild,
+  env,
+  existingRoles,
+  user,
+  roleName
+) => {
+  let roleToRemove = existingRoles.filter((role) => role.name === roleName)[0]
+    ?.id;
+
+  await axios.delete(
+    `${DISCORD_API_BASE_URL}/guilds/${guild}/members/${user}/roles/${roleToRemove}`,
+    {
+      headers: {
+        Authorization: `Bot ${env.DISCORD_TOKEN}`,
+      },
+    }
+  );
+};
+
 export const getChannels = async (guild, env) => {
   const rolesRes = await axios.get(
     `${DISCORD_API_BASE_URL}/guilds/${guild}/channels`,
@@ -142,8 +162,8 @@ export const getOrCreate1on1 = async (
   guild,
   env,
   existingChannels,
-  player1,
-  player2,
+  player1Role,
+  player2Role,
   category
 ) => {
   const ONE_ON_ONE_PERMS = [

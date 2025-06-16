@@ -48,6 +48,31 @@ export const ADD_PLAYER_COMMAND = {
   ],
 };
 
+export const BOOT_PLAYER_COMMAND = {
+  name: "boot_player",
+  description: "Boot a player from the game.",
+  options: [
+    {
+      name: "user",
+      description: "Username of the player to boot",
+      type: 6, // USER
+      required: true,
+    },
+    {
+      name: "tribe",
+      description: "The tribe to which the player belongs.",
+      type: 3, // STRING
+      required: true,
+    },
+    {
+      name: "is_jury",
+      description: "Whether the player made the jury.",
+      type: 5, // BOOLEAN
+      required: true,
+    },
+  ],
+};
+
 export const ONE_ON_ONES_COMMAND = {
   name: "one_on_ones",
   description: "Creates one on one chats between players on the same tribe.",
