@@ -162,10 +162,12 @@ export const getOrCreate1on1 = async (
   guild,
   env,
   existingChannels,
-  player1Role,
-  player2Role,
+  player1,
+  player2,
   category
 ) => {
+  // do we want roles instead of users for the 1:1s? probably doesn't matter if perms
+  // are being automated
   const ONE_ON_ONE_PERMS = [
     { id: guild, type: 0, deny: 0x400 }, // @everyone cannot view
     { id: player1.user.id, type: 1, allow: 0x400 | 0x800 }, // player 1 can view + message

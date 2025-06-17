@@ -18,6 +18,7 @@ const PRE_JURY_ROLE_NAME = "Prejury";
 const JURY_ROLE_NAME = "Jury";
 const SEASON_ROLE_NAME = "S2: Reflections of Fate";
 const TRUSTED_SPEC_ROLE = "Trusted Spectators";
+const ARCHIVE_CATEGORY_NAME = "Queens Basement";
 
 export const addPlayer = async (interaction, env) => {
   try {
@@ -129,9 +130,20 @@ export const bootPlayer = async (interaction, env) => {
     await removeRoleForPlayer(guild_id, env, roles, user, PLAYER_ROLE_NAME);
     await removeRoleForPlayer(guild_id, env, roles, user, tribe);
 
-    const tribe1on1sCategory = channels.filter(
-      (channel) => channel.name === `${tribe} One on Ones`
-    )[0]?.id;
+    const archiveCategory = await getOrCreateCategory(
+      guild_id,
+      env,
+      channels,
+      ARCHIVE_CATEGORY_NAME
+    );
+
+    const tribe1on1sCategory = await getOrCreateCategory(
+      guild_id,
+      env,
+      channels,
+      `${tribe} One on Ones`
+    );
+
     const oneOnOnes = channels.filter(
       (channel) =>
         channel.parent_id === tribe1on1sCategory &&
@@ -145,6 +157,34 @@ export const bootPlayer = async (interaction, env) => {
           permission_overwrites: [
             { id: guild_id, type: 0, deny: 0x400 }, // @everyone cannot view
           ],
+          parent_id: archiveCategory,
+        },
+        {
+          headers: {
+            Authorization: `Bot ${env.DISCORD_TOKEN}`,
+          },
+        }
+      );
+    }
+
+    const tribeConfsCategory = await getOrCreateCategory(
+      guild_id,
+      env,
+      channels,
+      `${tribe} Confs/Subs`
+    );
+
+    const confAndSub = channels.filter(
+      (channel) =>
+        channel.parent_id === tribeConfsCategory &&
+        channel.name.includes(playerName.toLowerCase().split(" ").join("-"))
+    );
+
+    for (const channel of confAndSub) {
+      await axios.patch(
+        `${DISCORD_API_BASE_URL}/channels/${channel.id}`,
+        {
+          parent_id: archiveCategory,
         },
         {
           headers: {
@@ -170,11 +210,6 @@ export const create1on1s = async (interaction, env) => {
     const members = await getMembers(guild_id, env);
     const roles = await getRoles(guild_id, env);
 
-    const playerRole = roles.filter((role) => role.name === "Player")[0]?.id;
-    const players = members.filter((member) =>
-      member.roles.includes(tribeRole)
-    );
-
     for (const tribe of tribeList) {
       const tribe1on1sCategory = await getOrCreateCategory(
         guild_id,
@@ -191,9 +226,7 @@ export const create1on1s = async (interaction, env) => {
       const pairs = [];
       for (let i = 0; i < players.length; i++) {
         for (let j = i + 1; j < players.length; j++) {
-          const [a, b] = [players[i], players[j]].sort(
-            (a, b) => a.nick - b.nick
-          );
+          const [a, b] = [players[i], players[j]].sort();
           pairs.push([a, b]);
         }
       }
