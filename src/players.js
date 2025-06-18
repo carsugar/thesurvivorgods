@@ -10,6 +10,7 @@ import {
   getOrCreateCategory,
   getOrCreate1on1,
   removeRoleForPlayer,
+  createRole,
 } from "./utils";
 import { ChannelTypes } from "discord-interactions";
 
@@ -17,6 +18,7 @@ const PLAYER_ROLE_NAME = "Dwarfs";
 const PRE_JURY_ROLE_NAME = "Prejury";
 const JURY_ROLE_NAME = "Jury";
 const SEASON_ROLE_NAME = "S2: Reflections of Fate";
+const SPEC_ROLE_NAME = "Spectators";
 const TRUSTED_SPEC_ROLE = "Trusted Spectators";
 const ARCHIVE_CATEGORY_NAME = "Queens Basement";
 
@@ -42,6 +44,9 @@ export const addPlayer = async (interaction, env) => {
 
     // Add general player role
     await addRoleForPlayer(guild_id, env, roles, user, PLAYER_ROLE_NAME);
+
+    await removeRoleForPlayer(guild_id, env, roles, user, SPEC_ROLE_NAME);
+    await removeRoleForPlayer(guild_id, env, roles, user, TRUSTED_SPEC_ROLE);
 
     // Change player name
     await axios.patch(
@@ -226,7 +231,9 @@ export const create1on1s = async (interaction, env) => {
       const pairs = [];
       for (let i = 0; i < players.length; i++) {
         for (let j = i + 1; j < players.length; j++) {
-          const [a, b] = [players[i], players[j]].sort();
+          const [a, b] = [players[i], players[j]].sort((a, b) =>
+            a.nick.localeCompare(b.nick)
+          );
           pairs.push([a, b]);
         }
       }
@@ -271,10 +278,38 @@ export const swapTribes = async (interaction, env) => {
     let newTribePlayers = {};
     newTribeList.forEach((newTribe) => (newTribePlayers[newTribe] = []));
 
-    shuffledPlayers.forEach((player, index) => {
-      const tribe = newTribeList[index % newTribeList.length];
+    for (const tribe of newTribeList) {
+      const newTribeRole = await createRole(guild_id, env, tribe);
+      roles.push({ name: tribe, id: newTribeRole }); // Make sure we know not to create the role again
+    }
+
+    let oldTribeRoles = [];
+    for (const tribe of oldTribeList) {
+      const oldTribeRole = roles.filter((role) => role.name === tribe)[0]?.id;
+      oldTribeRoles.push(oldTribeRole);
+    }
+
+    for (let i = 0; i < shuffledPlayers.length; i++) {
+      const tribe = newTribeList[i % newTribeList.length];
+      const player = shuffledPlayers[i];
       newTribePlayers[tribe].push(player);
-    });
+
+      await addRoleForPlayer(guild_id, env, roles, player.user.id, tribe);
+
+      const rolesToRemove = player.roles.filter((role) =>
+        oldTribeRoles.includes(role)
+      );
+
+      for (const oldRole of rolesToRemove) {
+        await removeRoleForPlayer(
+          guild_id,
+          env,
+          roles,
+          player.user.id,
+          oldRole
+        );
+      }
+    }
 
     for (const tribe of newTribeList) {
       const tribePlayers = newTribePlayers[tribe];
@@ -282,8 +317,8 @@ export const swapTribes = async (interaction, env) => {
       const pairs = [];
       for (let i = 0; i < tribePlayers.length; i++) {
         for (let j = i + 1; j < tribePlayers.length; j++) {
-          const [a, b] = [tribePlayers[i], tribePlayers[j]].sort(
-            (a, b) => a.nick - b.nick
+          const [a, b] = [tribePlayers[i], tribePlayers[j]].sort((a, b) =>
+            a.nick.localeCompare(b.nick)
           );
           pairs.push([a, b]);
         }
@@ -295,8 +330,9 @@ export const swapTribes = async (interaction, env) => {
         channels,
         `${tribe} One on Ones`
       );
+
       for (const pair of pairs) {
-        const oneOnOne = getOrCreate1on1(
+        const oneOnOne = await getOrCreate1on1(
           guild_id,
           env,
           channels,
@@ -304,6 +340,25 @@ export const swapTribes = async (interaction, env) => {
           pair[1],
           tribe1on1sCategory
         );
+
+        if (oneOnOne.parent_id !== tribe1on1sCategory) {
+          await axios.patch(
+            `${DISCORD_API_BASE_URL}/channels/${oneOnOne}`,
+            {
+              permission_overwrites: [
+                { id: guild_id, type: 0, deny: 0x400 }, // @everyone cannot view
+                { id: pair[0].user.id, type: 1, allow: 0x400 | 0x800 }, // player 1 can view + message
+                { id: pair[1].user.id, type: 1, allow: 0x400 | 0x800 }, // player 2 can view + message
+              ],
+              parent_id: tribe1on1sCategory,
+            },
+            {
+              headers: {
+                Authorization: `Bot ${env.DISCORD_TOKEN}`,
+              },
+            }
+          );
+        }
       }
     }
 
@@ -357,7 +412,7 @@ export const swapTribes = async (interaction, env) => {
 
     // const newTribesRundown = ``;
 
-    return JSON.stringify(newTribePlayers);
+    return "Tribes swapped!";
   } catch (e) {
     console.log("Failed to swap tribes: ", e);
   }

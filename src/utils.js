@@ -77,19 +77,34 @@ export const removeRoleForPlayer = async (
   env,
   existingRoles,
   user,
-  roleName
+  roleNameOrId
 ) => {
-  let roleToRemove = existingRoles.filter((role) => role.name === roleName)[0]
-    ?.id;
+  let roleToRemove = existingRoles.filter(
+    (role) => role.name === roleNameOrId || role.id === roleNameOrId
+  )[0]?.id;
 
-  await axios.delete(
-    `${DISCORD_API_BASE_URL}/guilds/${guild}/members/${user}/roles/${roleToRemove}`,
-    {
-      headers: {
-        Authorization: `Bot ${env.DISCORD_TOKEN}`,
-      },
+  if (roleToRemove) {
+    while (true) {
+      try {
+        await axios.delete(
+          `${DISCORD_API_BASE_URL}/guilds/${guild}/members/${user}/roles/${roleToRemove}`,
+          {
+            headers: {
+              Authorization: `Bot ${env.DISCORD_TOKEN}`,
+            },
+          }
+        );
+        break; // success, exit loop
+      } catch (e) {
+        if (e.response?.status === 429) {
+          const retryAfter = e.response.data?.retry_after || 1;
+          await new Promise((resolve) =>
+            setTimeout(resolve, retryAfter * 1000)
+          );
+        }
+      }
     }
-  );
+  }
 };
 
 export const getChannels = async (guild, env) => {
@@ -174,9 +189,13 @@ export const getOrCreate1on1 = async (
     { id: player2.user.id, type: 1, allow: 0x400 | 0x800 }, // player 2 can view + message
   ];
 
+  const player1Formatted = player1.nick.toLowerCase().split(" ").join("-");
+  const player2Formatted = player2.nick.toLowerCase().split(" ").join("-");
+  const oneOnOneName = `${player1Formatted}-${player2Formatted}`;
+
   // Look for existing 1:1 for these players
   let existing1on1 = existingChannels.filter(
-    (channel) => channel.name === `${player1.nick}-${player2.nick}`
+    (channel) => channel.name === oneOnOneName
   )[0]?.id;
 
   let new1on1;
@@ -198,7 +217,7 @@ export const getOrCreate1on1 = async (
     new1on1 = await createChannel(
       guild,
       env,
-      `${player1.nick}-${player2.nick}`,
+      oneOnOneName,
       ChannelTypes.GUILD_TEXT,
       ONE_ON_ONE_PERMS,
       category
