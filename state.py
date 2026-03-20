@@ -68,6 +68,27 @@ def _season_path(season: int) -> Path:
     return DATA_DIR / f"season_{season}.json"
 
 
+DEFAULT_THEME = {
+    # Category emojis
+    "tribe_emoji":    "🏕",
+    "alliance_emoji": "🤝",
+    "ones_emoji":     "💬",
+    "merge_emoji":    "🏆",
+    # Category / channel labels
+    "tribe_chat_label":      "tribe-chat",
+    "alliances_label":       "Alliances",
+    "ones_label":            "1:1s",
+    "merge_chat_label":      "merge-chat",
+    "confessionals_label":   "Confessionals",
+    "submissions_label":     "Submissions",
+    # Role labels
+    "player_role_label": "Player",
+    # Elimination flavor text
+    "snuff_title":  "The tribe has spoken.",
+    "snuff_suffix": "'s torch has been snuffed.",
+}
+
+
 def _default_state(season: int) -> dict:
     return {
         "season": season,
@@ -84,7 +105,13 @@ def _default_state(season: int) -> dict:
         "jury_voting_channel_id": None,
         "host_role_id": None,
         "spectator_role_id": None,
+        "theme": dict(DEFAULT_THEME),
     }
+
+
+def get_theme(game: dict) -> dict:
+    """Return the season theme, filling in any missing keys with defaults."""
+    return {**DEFAULT_THEME, **game.get("theme", {})}
 
 
 def _get_lock(season: int) -> asyncio.Lock:

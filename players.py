@@ -55,16 +55,18 @@ class PlayersCog(commands.Cog):
             )
             return
 
+        theme = state.get_theme(game)
+
         # Create or fetch the Player role
-        player_role = await utils.get_or_create_role(guild, f"S{season} Player", color=discord.Color.blurple())
+        player_role = await utils.get_or_create_role(guild, f"S{season} {theme['player_role_label']}", color=discord.Color.blurple())
 
         # Ensure host and spectator roles exist in state (hosts set these up once)
         host_role = guild.get_role(game["host_role_id"]) if game["host_role_id"] else None
         spec_role  = guild.get_role(game["spectator_role_id"]) if game["spectator_role_id"] else None
 
         # Ensure top-level categories for confessionals and submissions
-        conf_cat = await self._ensure_category(guild, f"S{season} Confessionals", game, "confessionals_category_id", host_role, spec_role)
-        subs_cat = await self._ensure_category(guild, f"S{season} Submissions", game, "subs_category_id", host_role, None)
+        conf_cat = await self._ensure_category(guild, f"S{season} {theme['confessionals_label']}", game, "confessionals_category_id", host_role, spec_role)
+        subs_cat = await self._ensure_category(guild, f"S{season} {theme['submissions_label']}", game, "subs_category_id", host_role, None)
 
         # Confessional: visible to spectators + hosts, player can write
         conf_overwrites = {
@@ -179,6 +181,7 @@ class PlayersCog(commands.Cog):
         guild = interaction.guild
         game = state.load(season)
 
+        theme = state.get_theme(game)
         uid = str(member.id)
         player = state.get_player(game, uid)
         if not player:
@@ -232,7 +235,7 @@ class PlayersCog(commands.Cog):
                             await ch.set_permissions(member, overwrite=None)
 
         # ── Remove Player role ───────────────────────────────────────────────
-        player_role = discord.utils.get(guild.roles, name=f"S{season} Player")
+        player_role = discord.utils.get(guild.roles, name=f"S{season} {theme['player_role_label']}")
         if player_role and player_role in member.roles:
             await member.remove_roles(player_role)
 
@@ -264,7 +267,11 @@ class PlayersCog(commands.Cog):
 
         log.info(f"Snuffed torch of {player['name']} → {destination}")
         await interaction.followup.send(
-            embed=utils.torch_embed(player["name"], reason),
+            embed=utils.torch_embed(
+                player["name"], reason,
+                snuff_title=theme["snuff_title"],
+                snuff_suffix=theme["snuff_suffix"],
+            ),
         )
 
     # ── /listplayers ─────────────────────────────────────────────────────────

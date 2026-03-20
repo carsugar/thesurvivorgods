@@ -81,7 +81,34 @@ Before running `/addplayer`, do this once in your server:
 | `/tribeswap "Angkor,Ta Keo,Bayon"` | Random tribe swap into named tribes. |
 | `/tribeswap "Solana,Aparri" manual_assignments:'{"uid1":"Solana","uid2":"Aparri"}'` | Manual tribe swap. |
 | `/merge "Solarrion"` | Merge all tribes into one. |
-| `/createalliance "The Cobras" "@p1 @p2 @p3" "Luzon"` | Create an alliance channel within a tribe. |
+| `/createalliance "The Cobras" "Luzon" @p1 @p2 @p3` | Create an alliance channel within a tribe. Select members via the Discord user picker (3 required, up to 8). |
+
+### Season Theming
+
+| Command | Description |
+|---|---|
+| `/settheme` | Customize emojis, channel/category labels, role names, and elimination flavor text for the season. All fields optional — only set what you want to change. |
+| `/showtheme` | Display all current theme settings for the season. |
+
+**Customizable fields:**
+
+| Field | Default | What it controls |
+|---|---|---|
+| `tribe_emoji` | 🏕 | Tribe category emoji |
+| `alliance_emoji` | 🤝 | Alliance category emoji |
+| `ones_emoji` | 💬 | 1:1 category emoji |
+| `merge_emoji` | 🏆 | Merge category emoji |
+| `tribe_chat_label` | `tribe-chat` | Tribe chat channel name suffix |
+| `alliances_label` | `Alliances` | Alliance category name suffix |
+| `ones_label` | `1:1s` | 1:1 category name suffix |
+| `merge_chat_label` | `merge-chat` | Merge chat channel name suffix |
+| `confessionals_label` | `Confessionals` | Confessionals category name |
+| `submissions_label` | `Submissions` | Submissions category name |
+| `player_role_label` | `Player` | Player role name suffix (e.g. `S1 Player`) |
+| `snuff_title` | `The tribe has spoken.` | Elimination embed title |
+| `snuff_suffix` | `'s torch has been snuffed.` | Text after player name on elimination |
+
+Theme settings are per-season and stored in `data/season_N.json`. Run `/settheme` before `/addplayer` or `/tribesetup` so new channels and roles pick up your labels.
 
 ### Advantage Management
 
@@ -99,7 +126,7 @@ Before running `/addplayer`, do this once in your server:
 
 ## How Channels Are Structured
 
-When you run `/tribesetup "Luzon" "@p1 @p2 @p3 @p4"`:
+When you run `/tribesetup "Luzon" "@p1 @p2 @p3 @p4"` (defaults shown — all emojis and labels are themeable via `/settheme`):
 
 ```
 S1 🏕 Luzon           (category — tribe role can read)
@@ -149,6 +176,7 @@ The file stores:
 - All advantages (type, holder, expiry, played status)
 - Jury and boot order
 - Pointers to Ponderosa/Jury/host/spectator IDs
+- Season theme (emojis, labels, flavor text — set via `/settheme`)
 
 ---
 

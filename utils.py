@@ -46,10 +46,15 @@ def warn_embed(title: str, description: str = "") -> discord.Embed:
     return embed(title, description, color=WARN_COLOR)
 
 
-def torch_embed(name: str, reason: str = "") -> discord.Embed:
+def torch_embed(
+    name: str,
+    reason: str = "",
+    snuff_title: str = "The tribe has spoken.",
+    snuff_suffix: str = "'s torch has been snuffed.",
+) -> discord.Embed:
     e = discord.Embed(
-        title=f"🔥 The tribe has spoken.",
-        description=f"**{name}**'s torch has been snuffed." + (f"\n{reason}" if reason else ""),
+        title=f"🔥 {snuff_title}",
+        description=f"**{name}**{snuff_suffix}" + (f"\n{reason}" if reason else ""),
         color=TORCH_COLOR,
     )
     return e

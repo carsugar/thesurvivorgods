@@ -19,6 +19,7 @@ COGS = [
     "cogs.players",
     "cogs.tribes",
     "cogs.advantages",
+    "cogs.config",
 ]
 
 class SurvivorBot(commands.Bot):
