@@ -471,16 +471,30 @@ class TribesCog(commands.Cog):
     @app_commands.command(name="createalliance", description="Create a private alliance chat within the tribe.")
     @app_commands.describe(
         alliance_name="Name for the alliance channel",
-        members="@mention all alliance members",
         tribe_name="Which tribe's alliance category to use",
+        member1="Alliance member",
+        member2="Alliance member",
+        member3="Alliance member",
+        member4="Alliance member",
+        member5="Alliance member",
+        member6="Alliance member",
+        member7="Alliance member",
+        member8="Alliance member",
         season="Season number (default: 1)",
     )
     async def createalliance(
         self,
         interaction: discord.Interaction,
         alliance_name: str,
-        members: str,
         tribe_name: str,
+        member1: discord.Member,
+        member2: discord.Member,
+        member3: discord.Member,
+        member4: Optional[discord.Member] = None,
+        member5: Optional[discord.Member] = None,
+        member6: Optional[discord.Member] = None,
+        member7: Optional[discord.Member] = None,
+        member8: Optional[discord.Member] = None,
         season: int = DEFAULT_SEASON,
     ):
         await interaction.response.defer(ephemeral=True)
@@ -501,12 +515,12 @@ class TribesCog(commands.Cog):
             await interaction.followup.send(embed=utils.error_embed("Not in tribe", "You must be in this tribe to create an alliance."), ephemeral=True)
             return
 
-        # Parse members
-        member_ids = [int(m.strip("<@!>")) for m in members.split() if m.startswith("<@")]
+        # Collect selected members, deduplicating
+        seen: set[int] = set()
         discord_members: list[Member] = []
-        for mid in member_ids:
-            m = await utils.resolve_member(guild, mid)
-            if m:
+        for m in [member1, member2, member3, member4, member5, member6, member7, member8]:
+            if m is not None and m.id not in seen:
+                seen.add(m.id)
                 discord_members.append(m)
 
         # All must be in the tribe
