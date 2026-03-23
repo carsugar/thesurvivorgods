@@ -6,8 +6,10 @@ Entry point: run with `python bot.py`
 import discord
 from discord.ext import commands
 import os
-import json
 import logging
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,10 +18,10 @@ logging.basicConfig(
 log = logging.getLogger("TheSurvivorGods")
 
 COGS = [
-    "cogs.players",
-    "cogs.tribes",
-    "cogs.advantages",
-    "cogs.config",
+    "players",
+    "tribes",
+    "advantages",
+    "config",
 ]
 
 class SurvivorBot(commands.Bot):
@@ -39,7 +41,7 @@ class SurvivorBot(commands.Bot):
 
         # Sync slash commands globally (or to a specific guild for faster testing)
         # For testing, pass guild=discord.Object(id=YOUR_GUILD_ID) to sync()
-        await self.tree.sync()
+        await self.tree.sync(guild=discord.Object(id=1336577033181855884))
         log.info("Slash commands synced.")
 
     async def on_ready(self):

@@ -18,10 +18,6 @@ import utils
 
 log = logging.getLogger("TheSurvivorGods.players")
 
-# Season currently being managed. In a multi-season server you'd store this
-# per-guild, but a simple module-level default is fine for V1.
-DEFAULT_SEASON = 1
-
 
 class PlayersCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -33,7 +29,7 @@ class PlayersCog(commands.Cog):
     @app_commands.describe(
         member="The Discord user to add as a player",
         display_name="The name shown in the game (e.g. first name or alias)",
-        season="Season number (default: 1)",
+        season="Season number (defaults to current season)",
     )
     @app_commands.checks.has_permissions(manage_guild=True)
     async def addplayer(
@@ -41,9 +37,11 @@ class PlayersCog(commands.Cog):
         interaction: discord.Interaction,
         member: Member,
         display_name: str,
-        season: int = DEFAULT_SEASON,
+        season: Optional[int] = None,
     ):
         await interaction.response.defer(ephemeral=True)
+        if season is None:
+            season = state.current_season()
         guild = interaction.guild
         game = state.load(season)
 
@@ -58,15 +56,15 @@ class PlayersCog(commands.Cog):
         theme = state.get_theme(game)
 
         # Create or fetch the Player role
-        player_role = await utils.get_or_create_role(guild, f"S{season} {theme['player_role_label']}", color=discord.Color.blurple())
+        player_role = await utils.get_or_create_role(guild, theme['player_role_label'], color=discord.Color.blurple())
 
         # Ensure host and spectator roles exist in state (hosts set these up once)
         host_role = guild.get_role(game["host_role_id"]) if game["host_role_id"] else None
         spec_role  = guild.get_role(game["spectator_role_id"]) if game["spectator_role_id"] else None
 
         # Ensure top-level categories for confessionals and submissions
-        conf_cat = await self._ensure_category(guild, f"S{season} {theme['confessionals_label']}", game, "confessionals_category_id", host_role, spec_role)
-        subs_cat = await self._ensure_category(guild, f"S{season} {theme['submissions_label']}", game, "subs_category_id", host_role, None)
+        conf_cat = await self._ensure_category(guild, theme['confessionals_label'], game, "confessionals_category_id", host_role, spec_role)
+        subs_cat = await self._ensure_category(guild, theme['submissions_label'], game, "subs_category_id", host_role, None)
 
         # Confessional: visible to spectators + hosts, player can write
         conf_overwrites = {
@@ -161,7 +159,7 @@ class PlayersCog(commands.Cog):
     @app_commands.describe(
         member="The player being eliminated",
         destination="premerge (goes to Ponderosa) or jury (goes to Jury Lounge)",
-        season="Season number (default: 1)",
+        season="Season number (defaults to current season)",
         reason="Optional note (not shown publicly)",
     )
     @app_commands.choices(destination=[
@@ -174,10 +172,12 @@ class PlayersCog(commands.Cog):
         interaction: discord.Interaction,
         member: Member,
         destination: str,
-        season: int = DEFAULT_SEASON,
+        season: Optional[int] = None,
         reason: str = "",
     ):
         await interaction.response.defer()
+        if season is None:
+            season = state.current_season()
         guild = interaction.guild
         game = state.load(season)
 
@@ -235,7 +235,7 @@ class PlayersCog(commands.Cog):
                             await ch.set_permissions(member, overwrite=None)
 
         # ── Remove Player role ───────────────────────────────────────────────
-        player_role = discord.utils.get(guild.roles, name=f"S{season} {theme['player_role_label']}")
+        player_role = discord.utils.get(guild.roles, name=theme['player_role_label'])
         if player_role and player_role in member.roles:
             await member.remove_roles(player_role)
 
@@ -277,9 +277,11 @@ class PlayersCog(commands.Cog):
     # ── /listplayers ─────────────────────────────────────────────────────────
 
     @app_commands.command(name="listplayers", description="Show all players and their current tribe/status.")
-    @app_commands.describe(season="Season number (default: 1)")
-    async def listplayers(self, interaction: discord.Interaction, season: int = DEFAULT_SEASON):
+    @app_commands.describe(season="Season number (defaults to current season)")
+    async def listplayers(self, interaction: discord.Interaction, season: Optional[int] = None):
         await interaction.response.defer(ephemeral=True)
+        if season is None:
+            season = state.current_season()
         game = state.load(season)
 
         if not game["players"]:
@@ -310,7 +312,7 @@ class PlayersCog(commands.Cog):
         jury_voting="The #jury-voting channel",
         host_role="The host role (gets read/write on all private channels)",
         spectator_role="The spectator role (read-only on confessionals)",
-        season="Season number (default: 1)",
+        season="Season number (defaults to current season)",
     )
     @app_commands.checks.has_permissions(manage_guild=True)
     async def setupchannels(
@@ -321,9 +323,11 @@ class PlayersCog(commands.Cog):
         jury_voting: TextChannel,
         host_role: discord.Role,
         spectator_role: discord.Role,
-        season: int = DEFAULT_SEASON,
+        season: Optional[int] = None,
     ):
         await interaction.response.defer(ephemeral=True)
+        if season is None:
+            season = state.current_season()
         game = state.load(season)
         game["ponderosa_channel_id"]   = ponderosa.id
         game["jury_lounge_channel_id"] = jury_lounge.id

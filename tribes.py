@@ -21,8 +21,6 @@ import utils
 
 log = logging.getLogger("TheSurvivorGods.tribes")
 
-DEFAULT_SEASON = 1
-
 # Preset tribe colors. Hosts can also pass a hex value.
 TRIBE_COLORS = {
     "red":    discord.Color.red(),
@@ -47,7 +45,7 @@ class TribesCog(commands.Cog):
         tribe_name="Tribe name (e.g. Luzon)",
         members="Space-separated @mentions of all tribe members",
         color="Tribe color (red/blue/yellow/green/purple/orange/teal/pink or hex #RRGGBB)",
-        season="Season number (default: 1)",
+        season="Season number (defaults to current season)",
     )
     @app_commands.checks.has_permissions(manage_guild=True)
     async def tribesetup(
@@ -56,9 +54,11 @@ class TribesCog(commands.Cog):
         tribe_name: str,
         members: str,
         color: str = "blue",
-        season: int = DEFAULT_SEASON,
+        season: Optional[int] = None,
     ):
         await interaction.response.defer(ephemeral=True)
+        if season is None:
+            season = state.current_season()
         guild = interaction.guild
         game = state.load(season)
 
@@ -109,7 +109,7 @@ class TribesCog(commands.Cog):
         theme = state.get_theme(game)
 
         # Create tribe role
-        tribe_role = await utils.get_or_create_role(guild, f"S{season} {tribe_name}", color=tribe_color, hoist=True)
+        tribe_role = await utils.get_or_create_role(guild, tribe_name, color=tribe_color, hoist=True)
         for m in discord_members:
             await m.add_roles(tribe_role)
 
@@ -123,7 +123,7 @@ class TribesCog(commands.Cog):
 
         tribe_cat = await utils.get_or_create_category(
             guild,
-            f"S{season} {theme['tribe_emoji']} {tribe_name}",
+            f"{theme['tribe_emoji']} {tribe_name}",
             overwrites=tribe_cat_overwrites,
         )
 
@@ -138,14 +138,14 @@ class TribesCog(commands.Cog):
         # ── Alliances category ────────────────────────────────────────────────
         alliances_cat = await utils.get_or_create_category(
             guild,
-            f"S{season} {theme['alliance_emoji']} {tribe_name} {theme['alliances_label']}",
+            f"{theme['alliance_emoji']} {tribe_name} {theme['alliances_label']}",
             overwrites={guild.default_role: PermissionOverwrite(read_messages=False)},
         )
 
         # ── 1:1 channels category ─────────────────────────────────────────────
         ones_cat = await utils.get_or_create_category(
             guild,
-            f"S{season} {theme['ones_emoji']} {tribe_name} {theme['ones_label']}",
+            f"{theme['ones_emoji']} {tribe_name} {theme['ones_label']}",
             overwrites={guild.default_role: PermissionOverwrite(read_messages=False)},
         )
 
@@ -212,7 +212,7 @@ class TribesCog(commands.Cog):
     @app_commands.describe(
         new_tribe_names="Comma-separated new tribe names (e.g. 'Angkor,Ta Keo,Bayon')",
         manual_assignments="Optional: JSON string mapping Discord user IDs to tribe names",
-        season="Season number (default: 1)",
+        season="Season number (defaults to current season)",
     )
     @app_commands.checks.has_permissions(manage_guild=True)
     async def tribeswap(
@@ -220,9 +220,11 @@ class TribesCog(commands.Cog):
         interaction: discord.Interaction,
         new_tribe_names: str,
         manual_assignments: Optional[str] = None,
-        season: int = DEFAULT_SEASON,
+        season: Optional[int] = None,
     ):
         await interaction.response.defer(ephemeral=True)
+        if season is None:
+            season = state.current_season()
         guild = interaction.guild
         game = state.load(season)
 
@@ -304,7 +306,7 @@ class TribesCog(commands.Cog):
 
             # Re-use tribesetup logic inline (simplified — color defaults to blue)
             tribe_color = discord.Color.blue()
-            tribe_role = await utils.get_or_create_role(guild, f"S{season} {tribe_name}", color=tribe_color, hoist=True)
+            tribe_role = await utils.get_or_create_role(guild, tribe_name, color=tribe_color, hoist=True)
             for m in discord_members:
                 await m.add_roles(tribe_role)
 
@@ -315,10 +317,10 @@ class TribesCog(commands.Cog):
             if host_role:
                 tribe_cat_overwrites[host_role] = PermissionOverwrite(read_messages=True, send_messages=True, manage_messages=True)
 
-            tribe_cat = await utils.get_or_create_category(guild, f"S{season} {theme['tribe_emoji']} {tribe_name}", overwrites=tribe_cat_overwrites)
+            tribe_cat = await utils.get_or_create_category(guild, f"{theme['tribe_emoji']} {tribe_name}", overwrites=tribe_cat_overwrites)
             tribe_chat = await utils.get_or_create_text_channel(guild, f"{utils.channel_safe(tribe_name)}-{utils.channel_safe(theme['tribe_chat_label'])}", category=tribe_cat)
-            alliances_cat = await utils.get_or_create_category(guild, f"S{season} {theme['alliance_emoji']} {tribe_name} {theme['alliances_label']}", overwrites={guild.default_role: PermissionOverwrite(read_messages=False)})
-            ones_cat = await utils.get_or_create_category(guild, f"S{season} {theme['ones_emoji']} {tribe_name} {theme['ones_label']}", overwrites={guild.default_role: PermissionOverwrite(read_messages=False)})
+            alliances_cat = await utils.get_or_create_category(guild, f"{theme['alliance_emoji']} {tribe_name} {theme['alliances_label']}", overwrites={guild.default_role: PermissionOverwrite(read_messages=False)})
+            ones_cat = await utils.get_or_create_category(guild, f"{theme['ones_emoji']} {tribe_name} {theme['ones_label']}", overwrites={guild.default_role: PermissionOverwrite(read_messages=False)})
 
             ones_channels: dict[str, int] = {}
             for i, m1 in enumerate(discord_members):
@@ -364,11 +366,13 @@ class TribesCog(commands.Cog):
     @app_commands.command(name="merge", description="Merge all tribes into a single merged tribe.")
     @app_commands.describe(
         merge_name="Name of the merged tribe (e.g. 'Vinaka')",
-        season="Season number (default: 1)",
+        season="Season number (defaults to current season)",
     )
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def merge(self, interaction: discord.Interaction, merge_name: str = "Merged", season: int = DEFAULT_SEASON):
+    async def merge(self, interaction: discord.Interaction, merge_name: str = "Merged", season: Optional[int] = None):
         await interaction.response.defer(ephemeral=True)
+        if season is None:
+            season = state.current_season()
         guild = interaction.guild
         game = state.load(season)
 
@@ -402,7 +406,7 @@ class TribesCog(commands.Cog):
 
         # Create merged tribe role
         merged_color = discord.Color.gold()
-        merged_role = await utils.get_or_create_role(guild, f"S{season} {merge_name}", color=merged_color, hoist=True)
+        merged_role = await utils.get_or_create_role(guild, merge_name, color=merged_color, hoist=True)
 
         all_members: list[Member] = []
         for uid, _ in active:
@@ -420,14 +424,14 @@ class TribesCog(commands.Cog):
         if host_role:
             overwrites[host_role] = PermissionOverwrite(read_messages=True, send_messages=True, manage_messages=True)
 
-        merge_cat = await utils.get_or_create_category(guild, f"S{season} {theme['merge_emoji']} {merge_name}", overwrites=overwrites)
+        merge_cat = await utils.get_or_create_category(guild, f"{theme['merge_emoji']} {merge_name}", overwrites=overwrites)
         merge_chat = await utils.get_or_create_text_channel(
             guild, f"{utils.channel_safe(merge_name)}-{utils.channel_safe(theme['merge_chat_label'])}", category=merge_cat,
             topic=f"Merged tribe — {merge_name}. {len(all_members)} players remain.",
         )
 
         # Cross-tribe 1:1s — every new pair that didn't previously exist
-        ones_cat = await utils.get_or_create_category(guild, f"S{season} {theme['ones_emoji']} {merge_name} {theme['ones_label']}", overwrites={guild.default_role: PermissionOverwrite(read_messages=False)})
+        ones_cat = await utils.get_or_create_category(guild, f"{theme['ones_emoji']} {merge_name} {theme['ones_label']}", overwrites={guild.default_role: PermissionOverwrite(read_messages=False)})
         ones_channels: dict[str, int] = {}
 
         for i, m1 in enumerate(all_members):
@@ -483,7 +487,7 @@ class TribesCog(commands.Cog):
         member6="Alliance member",
         member7="Alliance member",
         member8="Alliance member",
-        season="Season number (default: 1)",
+        season="Season number (defaults to current season)",
     )
     async def createalliance(
         self,
@@ -498,9 +502,11 @@ class TribesCog(commands.Cog):
         member6: Optional[discord.Member] = None,
         member7: Optional[discord.Member] = None,
         member8: Optional[discord.Member] = None,
-        season: int = DEFAULT_SEASON,
+        season: Optional[int] = None,
     ):
         await interaction.response.defer(ephemeral=True)
+        if season is None:
+            season = state.current_season()
         guild = interaction.guild
         game = state.load(season)
 

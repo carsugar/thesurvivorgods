@@ -155,6 +155,18 @@ def list_seasons() -> list[int]:
     )
 
 
+def current_season() -> int:
+    """Return the current active (non-ended) season number, or 1 if none exist yet."""
+    seasons = list_seasons()
+    if not seasons:
+        return 1
+    for n in reversed(seasons):
+        s = load(n)
+        if s.get("phase") != "ended":
+            return n
+    return seasons[-1]
+
+
 # ── Convenience accessors ────────────────────────────────────────────────────
 
 def get_player(state: dict, uid: str) -> Optional[dict]:
