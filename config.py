@@ -2,7 +2,7 @@
 config.py — Season lifecycle and theming commands.
 
 Commands:
-  /newseason   — Start a new season (auto-assigns season number)
+  /setupseason — Create a new season and all server roles/channels via a modal form
   /endseason   — End a season, clean up all roles, optionally delete channels
   /settheme    — Customize emojis, labels, and flavor text for a season
   /showtheme   — Display the current theme settings
@@ -11,6 +11,7 @@ Commands:
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord import PermissionOverwrite
 from typing import Optional
 import logging
 import state
@@ -19,22 +20,120 @@ import utils
 log = logging.getLogger("TheSurvivorGods.config")
 
 
+class SeasonSetupModal(discord.ui.Modal):
+    host_role_name = discord.ui.TextInput(
+        label="Host Role Name",
+        default="Host",
+        required=True,
+    )
+    spectator_role_name = discord.ui.TextInput(
+        label="Spectator Role Name",
+        default="Spectator",
+        required=True,
+    )
+    ponderosa_name = discord.ui.TextInput(
+        label="Ponderosa Channel Name",
+        default="ponderosa",
+        required=True,
+    )
+    jury_lounge_name = discord.ui.TextInput(
+        label="Jury Lounge Channel Name",
+        default="jury-lounge",
+        required=True,
+    )
+    jury_voting_name = discord.ui.TextInput(
+        label="Jury Voting Channel Name",
+        default="jury-voting",
+        required=True,
+    )
+
+    def __init__(self, season: int):
+        super().__init__(title=f"Season {season} Setup")
+        self.season = season
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        guild = interaction.guild
+        season = self.season
+        game = state.load(season)
+
+        # ── Create roles ──────────────────────────────────────────────────────
+        host_role = await utils.get_or_create_role(
+            guild, str(self.host_role_name),
+            color=discord.Color.dark_red(), hoist=True,
+        )
+        spec_role = await utils.get_or_create_role(
+            guild, str(self.spectator_role_name),
+            color=discord.Color.greyple(),
+        )
+
+        # ── Create channels ───────────────────────────────────────────────────
+        hidden = {guild.default_role: PermissionOverwrite(read_messages=False)}
+
+        ponderosa_ch = await utils.get_or_create_text_channel(
+            guild, utils.channel_safe(str(self.ponderosa_name)),
+            overwrites={
+                **hidden,
+                host_role: utils.host_rw(host_role),
+                spec_role: utils.spectator_ro(spec_role),
+            },
+            topic="Ponderosa — premerge players hang out here.",
+        )
+        jury_lounge_ch = await utils.get_or_create_text_channel(
+            guild, utils.channel_safe(str(self.jury_lounge_name)),
+            overwrites={
+                **hidden,
+                host_role: utils.host_rw(host_role),
+                spec_role: utils.spectator_ro(spec_role),
+            },
+            topic="Jury Lounge — jury members only.",
+        )
+        jury_voting_ch = await utils.get_or_create_text_channel(
+            guild, utils.channel_safe(str(self.jury_voting_name)),
+            overwrites={
+                **hidden,
+                host_role: utils.host_rw(host_role),
+            },
+            topic="Jury Voting — final vote, hosts only.",
+        )
+
+        # ── Persist ───────────────────────────────────────────────────────────
+        game["host_role_id"]           = host_role.id
+        game["spectator_role_id"]      = spec_role.id
+        game["ponderosa_channel_id"]   = ponderosa_ch.id
+        game["jury_lounge_channel_id"] = jury_lounge_ch.id
+        game["jury_voting_channel_id"] = jury_voting_ch.id
+        await state.save(season, game)
+
+        log.info(f"Season {season} set up: host={host_role.name}, spec={spec_role.name}")
+        await interaction.followup.send(
+            embed=utils.success_embed(
+                f"Season {season} is ready!",
+                f"**Host role:** {host_role.mention}\n"
+                f"**Spectator role:** {spec_role.mention}\n"
+                f"**Ponderosa:** {ponderosa_ch.mention}\n"
+                f"**Jury Lounge:** {jury_lounge_ch.mention}\n"
+                f"**Jury Voting:** {jury_voting_ch.mention}\n\n"
+                f"Now run `/addplayer` to register players, then `/tribesetup` to begin.",
+            ),
+            ephemeral=True,
+        )
+
+
 class ConfigCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    # ── /newseason ────────────────────────────────────────────────────────────
+    # ── /setupseason ─────────────────────────────────────────────────────────
 
-    @app_commands.command(name="newseason", description="Start a new season. Auto-assigns the next season number.")
+    @app_commands.command(name="setupseason", description="Start a new season and create all roles and channels via a setup form.")
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def newseason(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-
+    async def setupseason(self, interaction: discord.Interaction):
         seasons = state.list_seasons()
         for n in seasons:
             s = state.load(n)
             if s.get("phase") != "ended":
-                await interaction.followup.send(
+                await interaction.response.send_message(
                     embed=utils.warn_embed(
                         "Active season exists",
                         f"Season {n} is still active (phase: **{s['phase']}**). Run `/endseason` first.",
@@ -44,17 +143,8 @@ class ConfigCog(commands.Cog):
                 return
 
         next_num = max(seasons) + 1 if seasons else 1
-        state.load(next_num)  # creates and saves default state
-
-        log.info(f"Started Season {next_num}")
-        await interaction.followup.send(
-            embed=utils.success_embed(
-                f"Season {next_num} started!",
-                f"Run `/setupchannels` to configure roles and channels, then `/addplayer` to register players.\n"
-                f"Optionally run `/settheme` first to customise emojis and labels.",
-            ),
-            ephemeral=True,
-        )
+        state.load(next_num)  # creates and persists default state
+        await interaction.response.send_modal(SeasonSetupModal(season=next_num))
 
     # ── /endseason ────────────────────────────────────────────────────────────
 

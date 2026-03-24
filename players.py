@@ -10,7 +10,7 @@ Commands:
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord import Member, TextChannel, CategoryChannel
+from discord import Member, CategoryChannel
 from typing import Optional
 import logging
 import state
@@ -303,50 +303,6 @@ class PlayersCog(commands.Cog):
 
         await interaction.followup.send(embed=e, ephemeral=True)
 
-    # ── /setupchannels ───────────────────────────────────────────────────────
-
-    @app_commands.command(name="setupchannels", description="Set IDs for Ponderosa, Jury Lounge, and Jury Voting channels.")
-    @app_commands.describe(
-        ponderosa="The #ponderosa channel",
-        jury_lounge="The #jury-lounge channel",
-        jury_voting="The #jury-voting channel",
-        host_role="The host role (gets read/write on all private channels)",
-        spectator_role="The spectator role (read-only on confessionals)",
-        season="Season number (defaults to current season)",
-    )
-    @app_commands.checks.has_permissions(manage_guild=True)
-    async def setupchannels(
-        self,
-        interaction: discord.Interaction,
-        ponderosa: TextChannel,
-        jury_lounge: TextChannel,
-        jury_voting: TextChannel,
-        host_role: discord.Role,
-        spectator_role: discord.Role,
-        season: Optional[int] = None,
-    ):
-        await interaction.response.defer(ephemeral=True)
-        if season is None:
-            season = state.current_season()
-        game = state.load(season)
-        game["ponderosa_channel_id"]   = ponderosa.id
-        game["jury_lounge_channel_id"] = jury_lounge.id
-        game["jury_voting_channel_id"] = jury_voting.id
-        game["host_role_id"]           = host_role.id
-        game["spectator_role_id"]      = spectator_role.id
-        await state.save(season, game)
-
-        await interaction.followup.send(
-            embed=utils.success_embed(
-                "Season channels configured",
-                f"Ponderosa: {ponderosa.mention}\n"
-                f"Jury Lounge: {jury_lounge.mention}\n"
-                f"Jury Voting: {jury_voting.mention}\n"
-                f"Host role: {host_role.mention}\n"
-                f"Spectator role: {spectator_role.mention}",
-            ),
-            ephemeral=True,
-        )
 
 
 async def setup(bot: commands.Bot):

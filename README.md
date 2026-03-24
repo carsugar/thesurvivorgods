@@ -43,23 +43,13 @@ Slash commands sync on startup. They may take a few minutes to appear in Discord
 
 ## Pre-Season Setup Checklist
 
-1. **Run `/newseason`** — creates the season state and auto-assigns a season number.
+1. *(Optional)* **Run `/settheme`** — customise emojis, channel labels, role names, and elimination text before anything gets created.
 
-2. *(Optional)* **Run `/settheme`** — customise emojis, channel labels, role names, and elimination text before anything gets created.
+2. **Run `/setupseason`** — opens a form where you name the Host role, Spectator role, Ponderosa channel, Jury Lounge, and Jury Voting channel. The bot creates all of them and wires everything up automatically.
 
-3. **Create roles manually** (or let the bot create them):
-   - `Host` — full access to everything
-   - `Spectator` — read-only on confessionals, hidden from game channels
+3. **Run `/addplayer`** for each cast member to register them and create their confessional + submissions channels.
 
-4. **Create channels manually**:
-   - `#ponderosa` — for premerge boots
-   - `#jury-lounge` — for jury members
-   - `#jury-voting` — for final jury vote
-
-5. **Run `/setupchannels`** — tells the bot where those channels are:
-   ```
-   /setupchannels ponderosa:#ponderosa jury_lounge:#jury-lounge jury_voting:#jury-voting host_role:@Host spectator_role:@Spectator
-   ```
+4. **Run `/tribesetup`** for each tribe to kick off the game.
 
 ---
 
@@ -73,7 +63,6 @@ Slash commands sync on startup. They may take a few minutes to appear in Discord
 | `/snufftorch @member premerge` | Eliminate a player to Ponderosa. |
 | `/snufftorch @member jury` | Eliminate a player to Jury Lounge. |
 | `/listplayers` | Show all players and their tribes/status. |
-| `/setupchannels` | Point the bot at Ponderosa, Jury Lounge, Jury Voting, Host role, Spectator role. |
 
 ### Tribe Management
 
@@ -89,7 +78,7 @@ Slash commands sync on startup. They may take a few minutes to appear in Discord
 
 | Command | Description |
 |---|---|
-| `/newseason` | Start a new season. Auto-assigns the next season number. Blocks if a season is still active. |
+| `/setupseason` | Start a new season. Opens a form to name all roles and channels — the bot creates everything. Blocks if a season is already active. |
 | `/endseason` | End the season — removes all tribe and player roles from members and deletes them. Pass `delete_channels:True` to also delete all season channels and categories. |
 
 ### Season Theming
