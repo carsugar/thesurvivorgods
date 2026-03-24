@@ -1,11 +1,9 @@
 """
-config.py — Season lifecycle and theming commands.
+config.py — Season lifecycle commands.
 
 Commands:
-  /setupseason — Create a new season and all server roles/channels via a modal form
+  /setupseason — Create a new season via a two-step modal form (structure + theme)
   /endseason   — End a season, clean up all roles, optionally delete channels
-  /settheme    — Customize emojis, labels, and flavor text for a season
-  /showtheme   — Display the current theme settings
 """
 
 import discord
@@ -19,6 +17,125 @@ import utils
 
 log = logging.getLogger("TheSurvivorGods.config")
 
+
+# ── Modal 2: Theme ────────────────────────────────────────────────────────────
+
+class SeasonThemeModal(discord.ui.Modal):
+    player_role_label = discord.ui.TextInput(
+        label="Player Role Name",
+        default="Player",
+        required=True,
+    )
+    tribe_emoji = discord.ui.TextInput(
+        label="Tribe Category Emoji",
+        default="🏕",
+        required=True,
+        max_length=8,
+    )
+    merge_emoji = discord.ui.TextInput(
+        label="Merge Category Emoji",
+        default="🏆",
+        required=True,
+        max_length=8,
+    )
+    snuff_title = discord.ui.TextInput(
+        label="Elimination Title",
+        default="The tribe has spoken.",
+        required=True,
+    )
+    snuff_suffix = discord.ui.TextInput(
+        label="Elimination Body (after player name)",
+        default="'s torch has been snuffed.",
+        required=True,
+    )
+
+    def __init__(self, season: int, setup_data: dict):
+        super().__init__(title=f"Season {season} Theme")
+        self.season = season
+        self.setup_data = setup_data  # carries over data from Modal 1
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        guild = interaction.guild
+        season = self.season
+        game = state.load(season)
+
+        d = self.setup_data
+
+        # ── Create roles ──────────────────────────────────────────────────────
+        host_role = await utils.get_or_create_role(
+            guild, d["host_role_name"],
+            color=discord.Color.dark_red(), hoist=True,
+        )
+        spec_role = await utils.get_or_create_role(
+            guild, d["spectator_role_name"],
+            color=discord.Color.greyple(),
+        )
+
+        # ── Create channels ───────────────────────────────────────────────────
+        hidden = {guild.default_role: PermissionOverwrite(read_messages=False)}
+
+        ponderosa_ch = await utils.get_or_create_text_channel(
+            guild, utils.channel_safe(d["ponderosa_name"]),
+            overwrites={
+                **hidden,
+                host_role: utils.host_rw(host_role),
+                spec_role: utils.spectator_ro(spec_role),
+            },
+            topic="Ponderosa — premerge players hang out here.",
+        )
+        jury_lounge_ch = await utils.get_or_create_text_channel(
+            guild, utils.channel_safe(d["jury_lounge_name"]),
+            overwrites={
+                **hidden,
+                host_role: utils.host_rw(host_role),
+                spec_role: utils.spectator_ro(spec_role),
+            },
+            topic="Jury Lounge — jury members only.",
+        )
+        jury_voting_ch = await utils.get_or_create_text_channel(
+            guild, utils.channel_safe(d["jury_voting_name"]),
+            overwrites={
+                **hidden,
+                host_role: utils.host_rw(host_role),
+            },
+            topic="Jury Voting — final vote, hosts only.",
+        )
+
+        # ── Persist structure + theme ─────────────────────────────────────────
+        game["host_role_id"]           = host_role.id
+        game["spectator_role_id"]      = spec_role.id
+        game["ponderosa_channel_id"]   = ponderosa_ch.id
+        game["jury_lounge_channel_id"] = jury_lounge_ch.id
+        game["jury_voting_channel_id"] = jury_voting_ch.id
+
+        theme = state.get_theme(game)
+        theme["player_role_label"] = str(self.player_role_label)
+        theme["tribe_emoji"]       = str(self.tribe_emoji)
+        theme["merge_emoji"]       = str(self.merge_emoji)
+        theme["snuff_title"]       = str(self.snuff_title)
+        theme["snuff_suffix"]      = str(self.snuff_suffix)
+        game["theme"] = theme
+
+        await state.save(season, game)
+
+        log.info(f"Season {season} fully set up")
+        await interaction.followup.send(
+            embed=utils.success_embed(
+                f"Season {season} is ready!",
+                f"**Host role:** {host_role.mention}\n"
+                f"**Spectator role:** {spec_role.mention}\n"
+                f"**Ponderosa:** {ponderosa_ch.mention}\n"
+                f"**Jury Lounge:** {jury_lounge_ch.mention}\n"
+                f"**Jury Voting:** {jury_voting_ch.mention}\n"
+                f"**Player role name:** {theme['player_role_label']}\n\n"
+                f"Now run `/addplayer` to register players, then `/tribesetup` to begin.",
+            ),
+            ephemeral=True,
+        )
+
+
+# ── Modal 1: Structure ────────────────────────────────────────────────────────
 
 class SeasonSetupModal(discord.ui.Modal):
     host_role_name = discord.ui.TextInput(
@@ -52,73 +169,19 @@ class SeasonSetupModal(discord.ui.Modal):
         self.season = season
 
     async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        guild = interaction.guild
-        season = self.season
-        game = state.load(season)
-
-        # ── Create roles ──────────────────────────────────────────────────────
-        host_role = await utils.get_or_create_role(
-            guild, str(self.host_role_name),
-            color=discord.Color.dark_red(), hoist=True,
-        )
-        spec_role = await utils.get_or_create_role(
-            guild, str(self.spectator_role_name),
-            color=discord.Color.greyple(),
+        setup_data = {
+            "host_role_name":      str(self.host_role_name),
+            "spectator_role_name": str(self.spectator_role_name),
+            "ponderosa_name":      str(self.ponderosa_name),
+            "jury_lounge_name":    str(self.jury_lounge_name),
+            "jury_voting_name":    str(self.jury_voting_name),
+        }
+        await interaction.response.send_modal(
+            SeasonThemeModal(season=self.season, setup_data=setup_data)
         )
 
-        # ── Create channels ───────────────────────────────────────────────────
-        hidden = {guild.default_role: PermissionOverwrite(read_messages=False)}
 
-        ponderosa_ch = await utils.get_or_create_text_channel(
-            guild, utils.channel_safe(str(self.ponderosa_name)),
-            overwrites={
-                **hidden,
-                host_role: utils.host_rw(host_role),
-                spec_role: utils.spectator_ro(spec_role),
-            },
-            topic="Ponderosa — premerge players hang out here.",
-        )
-        jury_lounge_ch = await utils.get_or_create_text_channel(
-            guild, utils.channel_safe(str(self.jury_lounge_name)),
-            overwrites={
-                **hidden,
-                host_role: utils.host_rw(host_role),
-                spec_role: utils.spectator_ro(spec_role),
-            },
-            topic="Jury Lounge — jury members only.",
-        )
-        jury_voting_ch = await utils.get_or_create_text_channel(
-            guild, utils.channel_safe(str(self.jury_voting_name)),
-            overwrites={
-                **hidden,
-                host_role: utils.host_rw(host_role),
-            },
-            topic="Jury Voting — final vote, hosts only.",
-        )
-
-        # ── Persist ───────────────────────────────────────────────────────────
-        game["host_role_id"]           = host_role.id
-        game["spectator_role_id"]      = spec_role.id
-        game["ponderosa_channel_id"]   = ponderosa_ch.id
-        game["jury_lounge_channel_id"] = jury_lounge_ch.id
-        game["jury_voting_channel_id"] = jury_voting_ch.id
-        await state.save(season, game)
-
-        log.info(f"Season {season} set up: host={host_role.name}, spec={spec_role.name}")
-        await interaction.followup.send(
-            embed=utils.success_embed(
-                f"Season {season} is ready!",
-                f"**Host role:** {host_role.mention}\n"
-                f"**Spectator role:** {spec_role.mention}\n"
-                f"**Ponderosa:** {ponderosa_ch.mention}\n"
-                f"**Jury Lounge:** {jury_lounge_ch.mention}\n"
-                f"**Jury Voting:** {jury_voting_ch.mention}\n\n"
-                f"Now run `/addplayer` to register players, then `/tribesetup` to begin.",
-            ),
-            ephemeral=True,
-        )
-
+# ── Cog ───────────────────────────────────────────────────────────────────────
 
 class ConfigCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -202,7 +265,6 @@ class ConfigCog(commands.Cog):
         # ── 3. Optionally delete all channels and categories ──────────────────
         channels_deleted = 0
         if delete_channels:
-            # Per-player confessional and submission channels
             for uid, player in game["players"].items():
                 for ch_id in [player.get("confessional_id"), player.get("submissions_id")]:
                     if ch_id:
@@ -211,7 +273,6 @@ class ConfigCog(commands.Cog):
                             await ch.delete(reason=f"Season {season} ended")
                             channels_deleted += 1
 
-            # Top-level confessionals and submissions categories
             for cat_key in ["confessionals_category_id", "subs_category_id"]:
                 cat_id = game.get(cat_key)
                 if cat_id:
@@ -220,29 +281,24 @@ class ConfigCog(commands.Cog):
                         await cat.delete(reason=f"Season {season} ended")
                         channels_deleted += 1
 
-            # Tribe channels and categories
             for tribe_data in game["tribes"].values():
-                # Tribe chat
                 tc = guild.get_channel(tribe_data.get("tribe_chat_id"))
                 if tc:
                     await tc.delete(reason=f"Season {season} ended")
                     channels_deleted += 1
 
-                # 1:1 channels
                 for ch_id in tribe_data.get("ones_channels", {}).values():
                     ch = guild.get_channel(ch_id)
                     if ch:
                         await ch.delete(reason=f"Season {season} ended")
                         channels_deleted += 1
 
-                # Alliance channels (children of alliance category)
                 alliance_cat = guild.get_channel(tribe_data.get("category_id"))
                 if alliance_cat:
                     for ch in list(alliance_cat.channels):
                         await ch.delete(reason=f"Season {season} ended")
                         channels_deleted += 1
 
-                # Categories
                 seen_cats: set[int] = set()
                 for cat_id in [
                     tribe_data.get("tribe_cat_id"),
@@ -269,123 +325,6 @@ class ConfigCog(commands.Cog):
 
         await interaction.followup.send(
             embed=utils.success_embed(f"Season {season} has ended.", desc),
-            ephemeral=True,
-        )
-
-    # ── /showtheme ────────────────────────────────────────────────────────────
-
-    @app_commands.command(name="showtheme", description="Show the current season theme settings.")
-    @app_commands.describe(season="Season number (defaults to current season)")
-    @app_commands.checks.has_permissions(manage_guild=True)
-    async def showtheme(self, interaction: discord.Interaction, season: Optional[int] = None):
-        if season is None:
-            season = state.current_season()
-        game = state.load(season)
-        theme = state.get_theme(game)
-
-        lines = [
-            f"**Tribe category emoji:** {theme['tribe_emoji']}",
-            f"**Alliance category emoji:** {theme['alliance_emoji']}",
-            f"**1:1s category emoji:** {theme['ones_emoji']}",
-            f"**Merge category emoji:** {theme['merge_emoji']}",
-            f"**Tribe chat label:** {theme['tribe_chat_label']}",
-            f"**Alliances label:** {theme['alliances_label']}",
-            f"**1:1s label:** {theme['ones_label']}",
-            f"**Merge chat label:** {theme['merge_chat_label']}",
-            f"**Confessionals label:** {theme['confessionals_label']}",
-            f"**Submissions label:** {theme['submissions_label']}",
-            f"**Player role label:** {theme['player_role_label']}",
-            f"**Elimination title:** {theme['snuff_title']}",
-            f"**Elimination body suffix:** {theme['snuff_suffix']}",
-        ]
-
-        await interaction.response.send_message(
-            embed=utils.embed(f"Season {season} Theme", "\n".join(lines)),
-            ephemeral=True,
-        )
-
-    # ── /settheme ─────────────────────────────────────────────────────────────
-
-    @app_commands.command(name="settheme", description="Customize emojis, channel labels, and flavor text for the season.")
-    @app_commands.describe(
-        tribe_emoji="Emoji for tribe categories (default: 🏕)",
-        alliance_emoji="Emoji for alliance categories (default: 🤝)",
-        ones_emoji="Emoji for 1:1 categories (default: 💬)",
-        merge_emoji="Emoji for the merge category (default: 🏆)",
-        tribe_chat_label="Label for tribe chat channels (default: tribe-chat)",
-        alliances_label="Label for alliance categories (default: Alliances)",
-        ones_label="Label for 1:1 categories (default: 1:1s)",
-        merge_chat_label="Label for merge chat channel (default: merge-chat)",
-        confessionals_label="Label for confessionals category (default: Confessionals)",
-        submissions_label="Label for submissions category (default: Submissions)",
-        player_role_label="Name for the player role (default: Player)",
-        snuff_title="Title shown when a player is eliminated (default: The tribe has spoken.)",
-        snuff_suffix="Text after player name on elimination (default: 's torch has been snuffed.)",
-        season="Season number (defaults to current season)",
-    )
-    @app_commands.checks.has_permissions(manage_guild=True)
-    async def settheme(
-        self,
-        interaction: discord.Interaction,
-        tribe_emoji: Optional[str] = None,
-        alliance_emoji: Optional[str] = None,
-        ones_emoji: Optional[str] = None,
-        merge_emoji: Optional[str] = None,
-        tribe_chat_label: Optional[str] = None,
-        alliances_label: Optional[str] = None,
-        ones_label: Optional[str] = None,
-        merge_chat_label: Optional[str] = None,
-        confessionals_label: Optional[str] = None,
-        submissions_label: Optional[str] = None,
-        player_role_label: Optional[str] = None,
-        snuff_title: Optional[str] = None,
-        snuff_suffix: Optional[str] = None,
-        season: Optional[int] = None,
-    ):
-        await interaction.response.defer(ephemeral=True)
-        if season is None:
-            season = state.current_season()
-        game = state.load(season)
-        theme = state.get_theme(game)
-
-        updates = {
-            "tribe_emoji": tribe_emoji,
-            "alliance_emoji": alliance_emoji,
-            "ones_emoji": ones_emoji,
-            "merge_emoji": merge_emoji,
-            "tribe_chat_label": tribe_chat_label,
-            "alliances_label": alliances_label,
-            "ones_label": ones_label,
-            "merge_chat_label": merge_chat_label,
-            "confessionals_label": confessionals_label,
-            "submissions_label": submissions_label,
-            "player_role_label": player_role_label,
-            "snuff_title": snuff_title,
-            "snuff_suffix": snuff_suffix,
-        }
-
-        changed = []
-        for key, value in updates.items():
-            if value is not None:
-                theme[key] = value
-                changed.append(f"**{key}** → {value}")
-
-        if not changed:
-            await interaction.followup.send(
-                embed=utils.warn_embed("No changes", "Provide at least one field to update."),
-                ephemeral=True,
-            )
-            return
-
-        game["theme"] = theme
-        await state.save(season, game)
-        log.info(f"Season {season} theme updated: {', '.join(changed)}")
-
-        await interaction.followup.send(
-            embed=utils.success_embed(
-                f"Season {season} theme updated!",
-                "\n".join(changed),
-            ),
             ephemeral=True,
         )
 
