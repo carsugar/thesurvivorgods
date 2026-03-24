@@ -73,7 +73,7 @@ DEFAULT_THEME = {
     "tribe_emoji":    "🏕",
     "alliance_emoji": "🤝",
     "ones_emoji":     "💬",
-    "merge_emoji":    "🏆",
+    "merge_emoji":    "⚔️",
     # Category / channel labels
     "tribe_chat_label":      "tribe-chat",
     "alliances_label":       "Alliances",
@@ -184,6 +184,16 @@ def active_players(state: dict) -> list[tuple[str, dict]]:
 def players_in_tribe(state: dict, tribe_name: str) -> list[tuple[str, dict]]:
     return [(uid, p) for uid, p in state["players"].items()
             if p.get("tribe") == tribe_name and p["status"] == "active"]
+
+
+def find_ones_channel(game: dict, uid1: str, uid2: str) -> Optional[int]:
+    """Return the channel ID for an existing 1:1 between two players (any tribe)."""
+    pair_key = f"{min(uid1, uid2)}-{max(uid1, uid2)}"
+    for tribe_data in game["tribes"].values():
+        ch_id = tribe_data.get("ones_channels", {}).get(pair_key)
+        if ch_id:
+            return ch_id
+    return None
 
 
 def get_advantage(state: dict, key: str) -> Optional[dict]:

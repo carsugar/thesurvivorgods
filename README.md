@@ -43,15 +43,17 @@ Slash commands sync on startup. They may take a few minutes to appear in Discord
 
 ## Pre-Season Setup Checklist
 
-1. **Run `/setupseason`** — opens a two-step form:
-   - **Step 1 – Structure:** name the Host role, Spectator role, Ponderosa channel, Jury Lounge, and Jury Voting channel
-   - **Step 2 – Theme:** set the player role name, tribe/merge emojis, and elimination flavor text
+1. **Run `/setupseason`** — opens a form with 5 fields:
+   - Host role name, Spectator role name, Player role name
+   - Elimination title and body text
 
-   The bot creates everything and wires it all up automatically.
+   The bot creates all roles and channels automatically. Channel names default to `ponderosa`, `jury-lounge`, and `jury-voting`.
 
 2. **Run `/addplayer`** for each cast member to register them and create their confessional + submissions channels.
 
 3. **Run `/tribesetup`** for each tribe to kick off the game.
+
+> Made a mistake? Run `/editseason` to re-open the same form pre-filled with current values. Role renames are applied to existing Discord roles automatically.
 
 ---
 
@@ -80,20 +82,19 @@ Slash commands sync on startup. They may take a few minutes to appear in Discord
 
 | Command | Description |
 |---|---|
-| `/setupseason` | Start a new season. Opens a form to name all roles and channels — the bot creates everything. Blocks if a season is already active. |
+| `/setupseason` | Start a new season. Opens a form for role names and flavor text — the bot creates everything. Blocks if a season is already active. |
+| `/editseason` | Re-open the setup form pre-filled with current values. Renames existing Discord roles if names change. |
 | `/endseason` | End the season — removes all tribe and player roles from members and deletes them. Pass `delete_channels:True` to also delete all season channels and categories. |
 
-### Season Theme (configured in `/setupseason` Step 2)
+### Season Theme (configured in `/setupseason` and `/editseason`)
 
 | Field | Default | What it controls |
 |---|---|---|
 | Player Role Name | `Player` | Name of the role given to all active players |
-| Tribe Emoji | 🏕 | Emoji prefix on tribe categories |
-| Merge Emoji | 🏆 | Emoji prefix on the merge category |
 | Elimination Title | `The tribe has spoken.` | Title of the elimination announcement embed |
 | Elimination Body | `'s torch has been snuffed.` | Text after the player's name on elimination |
 
-All other channel/category labels (alliances, 1:1s, confessionals, etc.) use sensible defaults.
+Emojis and channel/category labels are fixed defaults (🏕 tribes, ⚔️ merge, 🤝 alliances, 💬 1:1s).
 
 ### Advantage Management
 

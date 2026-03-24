@@ -32,8 +32,6 @@ import utils
 
 log = logging.getLogger("TheSurvivorGods.advantages")
 
-DEFAULT_SEASON = 1
-
 ADVANTAGE_TYPES = [
     app_commands.Choice(name="Hidden immunity idol",  value="idol"),
     app_commands.Choice(name="Extra vote",            value="extra_vote"),
@@ -91,7 +89,6 @@ class AdvantagesCog(commands.Cog):
         advantage_type="Type of advantage",
         expires="Tribal Council # it expires (e.g. 'tribal_5'), or leave blank for never",
         notes="Optional notes visible only to hosts",
-        season="Season number (default: 1)",
     )
     @app_commands.choices(advantage_type=ADVANTAGE_TYPES)
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -102,9 +99,9 @@ class AdvantagesCog(commands.Cog):
         advantage_type: str,
         expires: Optional[str] = None,
         notes: str = "",
-        season: int = DEFAULT_SEASON,
     ):
         await interaction.response.defer(ephemeral=True)
+        season = state.current_season()
         game = state.load(season)
 
         uid = str(member.id)
@@ -143,7 +140,6 @@ class AdvantagesCog(commands.Cog):
         member="Player receiving the idol",
         expires="Tribal Council # it expires, or blank for never",
         notes="Optional host notes",
-        season="Season number (default: 1)",
     )
     @app_commands.checks.has_permissions(manage_guild=True)
     async def giveidol(
@@ -152,9 +148,9 @@ class AdvantagesCog(commands.Cog):
         member: Member,
         expires: Optional[str] = None,
         notes: str = "",
-        season: int = DEFAULT_SEASON,
     ):
         await interaction.response.defer(ephemeral=True)
+        season = state.current_season()
         game = state.load(season)
         uid = str(member.id)
         if not state.get_player(game, uid):
@@ -179,16 +175,15 @@ class AdvantagesCog(commands.Cog):
     @app_commands.describe(
         advantage_key="The reference key of the advantage to play",
         target="Player to protect (idols only — leave blank to protect yourself)",
-        season="Season number (default: 1)",
     )
     async def playidol(
         self,
         interaction: discord.Interaction,
         advantage_key: str,
         target: Optional[Member] = None,
-        season: int = DEFAULT_SEASON,
     ):
         await interaction.response.defer()
+        season = state.current_season()
         guild = interaction.guild
         game = state.load(season)
         host_role = guild.get_role(game["host_role_id"]) if game["host_role_id"] else None
@@ -214,7 +209,6 @@ class AdvantagesCog(commands.Cog):
         holder_name = game["players"].get(holder_uid, {}).get("name", "Unknown")
         adv_type = adv["type"]
 
-        # Mark played
         adv["played"] = True
         if key in game["players"].get(holder_uid, {}).get("advantages", []):
             game["players"][holder_uid]["advantages"].remove(key)
@@ -241,16 +235,15 @@ class AdvantagesCog(commands.Cog):
     @app_commands.describe(
         advantage_key="The reference key of the advantage",
         recipient="Player to give it to",
-        season="Season number (default: 1)",
     )
     async def transferadvantage(
         self,
         interaction: discord.Interaction,
         advantage_key: str,
         recipient: Member,
-        season: int = DEFAULT_SEASON,
     ):
         await interaction.response.defer(ephemeral=True)
+        season = state.current_season()
         guild = interaction.guild
         game = state.load(season)
         host_role = guild.get_role(game["host_role_id"]) if game["host_role_id"] else None
@@ -277,7 +270,6 @@ class AdvantagesCog(commands.Cog):
             await interaction.followup.send(embed=utils.error_embed("Recipient not registered"), ephemeral=True)
             return
 
-        # Transfer
         if key in game["players"].get(old_uid, {}).get("advantages", []):
             game["players"][old_uid]["advantages"].remove(key)
         game["players"][new_uid]["advantages"].append(key)
@@ -301,9 +293,9 @@ class AdvantagesCog(commands.Cog):
     # ── /listadvantages ───────────────────────────────────────────────────────
 
     @app_commands.command(name="listadvantages", description="List all advantages. Hosts see all; players see only their own.")
-    @app_commands.describe(season="Season number (default: 1)")
-    async def listadvantages(self, interaction: discord.Interaction, season: int = DEFAULT_SEASON):
+    async def listadvantages(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
+        season = state.current_season()
         guild = interaction.guild
         game = state.load(season)
         host_role = guild.get_role(game["host_role_id"]) if game["host_role_id"] else None
@@ -339,10 +331,11 @@ class AdvantagesCog(commands.Cog):
     # ── /expireadvantage ──────────────────────────────────────────────────────
 
     @app_commands.command(name="expireadvantage", description="[Host] Manually expire/remove an advantage without playing it.")
-    @app_commands.describe(advantage_key="The reference key", season="Season number (default: 1)")
+    @app_commands.describe(advantage_key="The reference key")
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def expireadvantage(self, interaction: discord.Interaction, advantage_key: str, season: int = DEFAULT_SEASON):
+    async def expireadvantage(self, interaction: discord.Interaction, advantage_key: str):
         await interaction.response.defer(ephemeral=True)
+        season = state.current_season()
         game = state.load(season)
         key = advantage_key.upper()
         adv = state.get_advantage(game, key)
@@ -353,7 +346,7 @@ class AdvantagesCog(commands.Cog):
         holder_uid = adv["holder_uid"]
         if key in game["players"].get(holder_uid, {}).get("advantages", []):
             game["players"][holder_uid]["advantages"].remove(key)
-        adv["played"] = True  # mark expired
+        adv["played"] = True
 
         await state.save(season, game)
         await interaction.followup.send(

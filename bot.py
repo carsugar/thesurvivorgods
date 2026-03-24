@@ -39,9 +39,10 @@ class SurvivorBot(commands.Bot):
             except Exception as e:
                 log.error(f"Failed to load cog {cog}: {e}")
 
-        # Sync slash commands globally (or to a specific guild for faster testing)
-        # For testing, pass guild=discord.Object(id=YOUR_GUILD_ID) to sync()
-        await self.tree.sync(guild=discord.Object(id=1336577033181855884))
+        # Sync commands to guild for instant updates
+        guild_obj = discord.Object(id=1336577033181855884)
+        self.tree.copy_global_to(guild=guild_obj)
+        await self.tree.sync(guild=guild_obj)
         log.info("Slash commands synced.")
 
     async def on_ready(self):

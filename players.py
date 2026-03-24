@@ -29,7 +29,6 @@ class PlayersCog(commands.Cog):
     @app_commands.describe(
         member="The Discord user to add as a player",
         display_name="The name shown in the game (e.g. first name or alias)",
-        season="Season number (defaults to current season)",
     )
     @app_commands.checks.has_permissions(manage_guild=True)
     async def addplayer(
@@ -37,11 +36,9 @@ class PlayersCog(commands.Cog):
         interaction: discord.Interaction,
         member: Member,
         display_name: str,
-        season: Optional[int] = None,
     ):
         await interaction.response.defer(ephemeral=True)
-        if season is None:
-            season = state.current_season()
+        season = state.current_season()
         guild = interaction.guild
         game = state.load(season)
 
@@ -101,8 +98,12 @@ class PlayersCog(commands.Cog):
             topic=f"📬 {display_name}'s submissions — private.",
         )
 
-        # Assign player role
+        # Assign player role and set server nickname to display name
         await member.add_roles(player_role)
+        try:
+            await member.edit(nick=display_name)
+        except Exception as e:
+            log.warning(f"Could not set nickname for {member.name}: {e}")
 
         # Persist
         game["players"][uid] = {
@@ -159,7 +160,6 @@ class PlayersCog(commands.Cog):
     @app_commands.describe(
         member="The player being eliminated",
         destination="premerge (goes to Ponderosa) or jury (goes to Jury Lounge)",
-        season="Season number (defaults to current season)",
         reason="Optional note (not shown publicly)",
     )
     @app_commands.choices(destination=[
@@ -172,12 +172,10 @@ class PlayersCog(commands.Cog):
         interaction: discord.Interaction,
         member: Member,
         destination: str,
-        season: Optional[int] = None,
         reason: str = "",
     ):
         await interaction.response.defer()
-        if season is None:
-            season = state.current_season()
+        season = state.current_season()
         guild = interaction.guild
         game = state.load(season)
 
@@ -249,19 +247,113 @@ class PlayersCog(commands.Cog):
         if dest_channel_id:
             dest_ch = guild.get_channel(dest_channel_id)
             if dest_ch:
-                await dest_ch.set_permissions(member, read_messages=True, send_messages=True)
+                bot_ow = dest_ch.overwrites_for(guild.me)
+                if not bot_ow.read_messages:
+                    try:
+                        await dest_ch.set_permissions(
+                            guild.me,
+                            read_messages=True, send_messages=True,
+                            manage_messages=True, manage_channels=True,
+                        )
+                    except discord.Forbidden:
+                        log.error(
+                            f"Bot lacks access to #{dest_ch.name} — grant the bot Administrator "
+                            f"or add an explicit channel override for it."
+                        )
+                try:
+                    await dest_ch.set_permissions(member, read_messages=True, send_messages=True)
+                except discord.Forbidden:
+                    log.error(f"Could not grant {member.name} access to #{dest_ch.name} — bot lacks channel access.")
         else:
             log.warning(f"{dest_channel_name} channel not configured. Set game.{{'ponderosa_channel_id'/'jury_lounge_channel_id'}}.")
 
-        # Conf + subs channels are deliberately untouched.
+        # ── Archive 1:1 channels involving this player ───────────────────────
+        archive_cat = await utils.ensure_archive_category(guild, game)
+        for tribe_data in game["tribes"].values():
+            for pair_key, ch_id in list(tribe_data.get("ones_channels", {}).items()):
+                if uid in pair_key.split("-"):
+                    one_ch = guild.get_channel(ch_id)
+                    if one_ch:
+                        await one_ch.edit(category=archive_cat, sync_permissions=True)
+
+        # ── Move conf/subs to elimination archive categories ──────────────────
+        host_role = guild.get_role(game["host_role_id"]) if game.get("host_role_id") else None
+        spec_role_obj = guild.get_role(game.get("spectator_role_id")) if game.get("spectator_role_id") else None
+
+        if destination == "premerge":
+            conf_cat_key  = "premerge_conf_cat_id"
+            subs_cat_key  = "premerge_subs_cat_id"
+            conf_cat_label = f"📖 Pre-Jury {theme['confessionals_label']}"
+            subs_cat_label = f"📬 Pre-Jury {theme['submissions_label']}"
+        else:
+            conf_cat_key  = "jury_conf_cat_id"
+            subs_cat_key  = "jury_subs_cat_id"
+            conf_cat_label = f"📖 Jury {theme['confessionals_label']}"
+            subs_cat_label = f"📬 Jury {theme['submissions_label']}"
+
+        # Conf archive category: spectators + hosts can read, no one writes
+        conf_cat_id = game.get(conf_cat_key)
+        elim_conf_cat = guild.get_channel(conf_cat_id) if conf_cat_id else None
+        if elim_conf_cat is None:
+            conf_ow = {guild.default_role: discord.PermissionOverwrite(read_messages=False)}
+            if host_role:
+                conf_ow[host_role] = discord.PermissionOverwrite(read_messages=True, send_messages=False)
+            if spec_role_obj:
+                conf_ow[spec_role_obj] = discord.PermissionOverwrite(read_messages=True, send_messages=False)
+            elim_conf_cat = await utils.get_or_create_category(guild, conf_cat_label, overwrites=conf_ow)
+            game[conf_cat_key] = elim_conf_cat.id
+
+        # Subs archive category: hosts only
+        subs_cat_id = game.get(subs_cat_key)
+        elim_subs_cat = guild.get_channel(subs_cat_id) if subs_cat_id else None
+        if elim_subs_cat is None:
+            subs_ow = {guild.default_role: discord.PermissionOverwrite(read_messages=False)}
+            if host_role:
+                subs_ow[host_role] = discord.PermissionOverwrite(read_messages=True, send_messages=False)
+            elim_subs_cat = await utils.get_or_create_category(guild, subs_cat_label, overwrites=subs_ow)
+            game[subs_cat_key] = elim_subs_cat.id
+
+        conf_ch = guild.get_channel(player.get("confessional_id")) if player.get("confessional_id") else None
+        if conf_ch:
+            await conf_ch.edit(category=elim_conf_cat, sync_permissions=True)
+
+        subs_ch = guild.get_channel(player.get("submissions_id")) if player.get("submissions_id") else None
+        if subs_ch:
+            await subs_ch.edit(category=elim_subs_cat, sync_permissions=True)
 
         # ── Update state ─────────────────────────────────────────────────────
+        # Calculate placement before appending (total - already_out = this place)
+        total_players = len(game["players"])
+        already_out = len(game["premerge_boot_order"]) + len(game["jury"])
+        place = total_players - already_out
+
         player["status"] = destination
         player["tribe"] = None
+        first_premerge = destination == "premerge" and len(game["premerge_boot_order"]) == 0
+        first_jury     = destination == "jury"     and len(game["jury"]) == 0
+
         if destination == "jury":
             game["jury"].append(uid)
         else:
             game["premerge_boot_order"].append(uid)
+
+        # Update server nickname to show season and placement
+        try:
+            await member.edit(nick=f"{player['name']} [{season}:{place}]")
+        except Exception as e:
+            log.warning(f"Could not update nickname for {player['name']}: {e}")
+
+        # Unlock spectator read access to destination channel on first use
+        spec_role = guild.get_role(game.get("spectator_role_id")) if game.get("spectator_role_id") else None
+        if spec_role:
+            if first_premerge and game.get("ponderosa_channel_id"):
+                ponderosa_ch = guild.get_channel(game["ponderosa_channel_id"])
+                if ponderosa_ch:
+                    await ponderosa_ch.set_permissions(spec_role, read_messages=True, send_messages=False)
+            if first_jury and game.get("jury_lounge_channel_id"):
+                jury_ch = guild.get_channel(game["jury_lounge_channel_id"])
+                if jury_ch:
+                    await jury_ch.set_permissions(spec_role, read_messages=True, send_messages=False)
 
         await state.save(season, game)
 
@@ -277,11 +369,9 @@ class PlayersCog(commands.Cog):
     # ── /listplayers ─────────────────────────────────────────────────────────
 
     @app_commands.command(name="listplayers", description="Show all players and their current tribe/status.")
-    @app_commands.describe(season="Season number (defaults to current season)")
-    async def listplayers(self, interaction: discord.Interaction, season: Optional[int] = None):
+    async def listplayers(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        if season is None:
-            season = state.current_season()
+        season = state.current_season()
         game = state.load(season)
 
         if not game["players"]:

@@ -97,13 +97,17 @@ async def get_or_create_role(guild: Guild, name: str, color: discord.Color = dis
 async def get_or_create_category(guild: Guild, name: str, overwrites: dict = None, position: int = None) -> CategoryChannel:
     cat = discord.utils.get(guild.categories, name=name)
     if cat is None:
-        kwargs = {"name": name}
-        if overwrites:
-            kwargs["overwrites"] = overwrites
+        ow = dict(overwrites) if overwrites else {}
+        ow[guild.me] = PermissionOverwrite(read_messages=True, send_messages=True, manage_channels=True)
+        kwargs = {"name": name, "overwrites": ow}
         if position is not None:
             kwargs["position"] = position
         cat = await guild.create_category(**kwargs)
         log.info(f"Created category: {name}")
+    else:
+        # Ensure the bot has an explicit override even on pre-existing categories
+        if guild.me not in cat.overwrites or not cat.overwrites[guild.me].manage_channels:
+            await cat.set_permissions(guild.me, read_messages=True, send_messages=True, manage_channels=True)
     return cat
 
 
@@ -116,12 +120,21 @@ async def get_or_create_text_channel(
 ) -> TextChannel:
     existing = discord.utils.get(guild.text_channels, name=name)
     if existing:
+        # Ensure the bot has explicit access on pre-existing channels
+        bot_ow = existing.overwrites_for(guild.me)
+        if not bot_ow.read_messages:
+            await existing.set_permissions(
+                guild.me,
+                read_messages=True, send_messages=True,
+                manage_messages=True, manage_channels=True,
+            )
         return existing
-    kwargs = {"name": name}
+    ow = dict(overwrites) if overwrites else {}
+    # Bot must always have an explicit override in channels it creates
+    ow[guild.me] = PermissionOverwrite(read_messages=True, send_messages=True, manage_messages=True, manage_channels=True)
+    kwargs = {"name": name, "overwrites": ow}
     if category:
         kwargs["category"] = category
-    if overwrites:
-        kwargs["overwrites"] = overwrites
     if topic:
         kwargs["topic"] = topic
     channel = await guild.create_text_channel(**kwargs)
@@ -142,6 +155,24 @@ async def lock_channel(channel: TextChannel):
     """Fully hide a channel from everyone (used after snuff for tribe chats)."""
     await channel.set_permissions(channel.guild.default_role, overwrite=PermissionOverwrite(read_messages=False))
     log.info(f"Locked #{channel.name}")
+
+
+# ── Archive helpers ──────────────────────────────────────────────────────────
+
+async def ensure_archive_category(guild: Guild, game: dict) -> CategoryChannel:
+    """Get or create the season archive category (host read-only, hidden from everyone else)."""
+    cat_id = game.get("archive_category_id")
+    if cat_id:
+        cat = guild.get_channel(cat_id)
+        if cat:
+            return cat
+    host_role = guild.get_role(game["host_role_id"]) if game.get("host_role_id") else None
+    ow = {guild.default_role: PermissionOverwrite(read_messages=False)}
+    if host_role:
+        ow[host_role] = PermissionOverwrite(read_messages=True, send_messages=False)
+    cat = await get_or_create_category(guild, "📦 Archive", overwrites=ow)
+    game["archive_category_id"] = cat.id
+    return cat
 
 
 # ── Member resolution ────────────────────────────────────────────────────────
