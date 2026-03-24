@@ -106,6 +106,9 @@ def _default_state(season: int) -> dict:
         "host_role_id": None,
         "spectator_role_id": None,
         "theme": dict(DEFAULT_THEME),
+        "tribal_count": 0,
+        "tribal_category_id": None,
+        "tribals": [],
     }
 
 

@@ -22,6 +22,7 @@ COGS = [
     "tribes",
     "advantages",
     "config",
+    "tribal",
 ]
 
 class SurvivorBot(commands.Bot):
