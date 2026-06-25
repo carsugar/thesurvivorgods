@@ -7,6 +7,7 @@ Commands:
   /endseason   — End a season, clean up all roles, optionally delete channels
 """
 
+import asyncio
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -121,7 +122,9 @@ class SeasonModal(discord.ui.Modal):
                 f"**Ponderosa:** {ponderosa_ch.mention}\n"
                 f"**Jury Lounge:** {jury_lounge_ch.mention}\n"
                 f"**Jury Voting:** {jury_voting_ch.mention}\n\n"
-                f"Now run `/addplayer` to register players, then `/tribesetup` to begin."
+                f"⚠️ **Manually assign** {host_role.mention} to yourself and any co-hosts, "
+                f"and {spec_role.mention} to spectators.\n\n"
+                f"Then run `/addplayer` to register players and `/tribesetup` to begin."
             )
             title = f"Season {season} is ready!"
             log.info(f"Season {season} set up")
@@ -325,6 +328,30 @@ class ConfigCog(commands.Cog):
 
         await interaction.followup.send(
             embed=utils.success_embed(f"Season {season} has ended.", desc),
+            ephemeral=True,
+        )
+
+
+    # ── /removetags ──────────────────────────────────────────────────────────
+
+    @app_commands.command(name="removetags", description="Bulk-remove Carlbot tags by sending !tag remove for each one.")
+    @app_commands.describe(tags="Comma-separated list of tag names to remove")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def removetags(self, interaction: discord.Interaction, tags: str):
+        season = state.current_season()
+        if not season or not await utils.is_host(interaction, season.get("host_role_id")):
+            await interaction.response.send_message("Not yours.", ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        names = [t.strip() for t in tags.split(",") if t.strip()]
+        for name in names:
+            await interaction.channel.send(f"!tag remove {name}")
+            await asyncio.sleep(0.5)
+
+        await interaction.followup.send(
+            embed=utils.success_embed("Tags removed.", f"Sent `!tag remove` for **{len(names)}** tag(s)."),
             ephemeral=True,
         )
 
